@@ -11,6 +11,7 @@ Getting a web app into a desktop window often means wiring together two differen
 - **Next.js 16 App Router** for your application interface
 - **Electron** for desktop capabilities such as windows, menus, files, and notifications
 - **Electron Forge** for packaging and installer creation
+- **shadcn/ui + Tailwind CSS** for project-owned, accessible UI components
 - **A secure default bridge** between your UI and native code
 - **One development command** to run Next.js and Electron together
 
@@ -54,6 +55,18 @@ npm run dev
 | Add Electron or native behaviour | `electron/main.cjs` |
 | Configure installers, icons, and signing | `forge.config.cjs` |
 | Rename your app, author, and package ID | `package.json` |
+
+## UI components included
+
+Nextron is configured for [shadcn/ui](https://ui.shadcn.com/). Its component source code lives in your project, so you can freely inspect and customize it instead of working around a black-box design system.
+
+The starter includes `Button` and `Card` in `components/ui/`. Add more components whenever you need them:
+
+```bash
+npx shadcn@latest add input dialog form sonner
+```
+
+The `components.json` file already tells the shadcn CLI where to place components and how imports are organized.
 
 ## Adding desktop features safely
 
