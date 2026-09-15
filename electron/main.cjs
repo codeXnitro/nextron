@@ -60,6 +60,8 @@ async function createWindow() {
       nodeIntegration: false,
     },
   });
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.setAutoHideMenuBar(true);
 
   if (isDevelopment) {
     await mainWindow.loadURL("http://localhost:3000");

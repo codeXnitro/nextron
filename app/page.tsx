@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowUpRight, Box, CheckCircle2, Monitor, Terminal } from "lucide-react";
+import { ArrowUpRight, Box, CheckCircle2, Monitor, Moon, Sun, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -13,11 +14,12 @@ const steps = [
 
 export default function Home() {
   const [version, setVersion] = useState("web preview");
+  const { resolvedTheme, setTheme } = useTheme();
   useEffect(() => { window.desktop?.getVersion().then((value) => setVersion(`Desktop v${value}`)); }, []);
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-16 md:py-24">
-      <div className="mb-16 flex items-center gap-2 text-sm font-medium text-muted-foreground"><CheckCircle2 className="size-4 text-primary" /> {version}</div>
+      <div className="mb-16 flex items-center justify-between gap-4 text-sm font-medium text-muted-foreground"><span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" /> {version}</span><Button variant="outline" size="icon" aria-label="Toggle color theme" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>{resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}</Button></div>
       <section className="max-w-3xl">
         <p className="mb-4 text-sm font-semibold tracking-[0.18em] text-primary">NEXT.JS 16 × ELECTRON × SHADCN/UI</p>
         <h1 className="text-5xl font-bold tracking-tight text-balance md:text-7xl">Build web apps that live on the desktop.</h1>
