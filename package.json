@@ -1,0 +1,48 @@
+{
+  "name": "next-electron-desktop-kit",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Your Name <you@example.com>",
+  "license": "MIT",
+  "description": "A beginner-friendly Next.js 16 and Electron desktop starter kit.",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "dev:web": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/prepare-desktop.mjs",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make",
+    "publish": "npm run build && electron-forge publish"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.3",
+    "@electron-forge/maker-deb": "^7.8.3",
+    "@electron-forge/maker-dmg": "^7.8.3",
+    "@electron-forge/maker-squirrel": "^7.8.3",
+    "@electron-forge/maker-zip": "^7.8.3",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "concurrently": "^9.1.0",
+    "electron": "^37.2.0",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^16.0.0",
+    "typescript": "^5.7.2",
+    "wait-on": "^8.0.1"
+  },
+  "allowScripts": {
+    "electron@37.10.3": true,
+    "electron-winstaller@5.4.4": true,
+    "unrs-resolver@1.12.2": true
+  }
+}
