@@ -4,4 +4,5 @@ out
 dist
 makers
 *.log
+*.tsbuildinfo
 .env*.local
