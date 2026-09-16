@@ -1,131 +1,248 @@
-# Nextron
+# Nextron 🚀
 
-> A friendly starter kit for building, packaging, and shipping desktop apps with Next.js 16, Electron, and Electron Forge.
+> **Turn your Next.js skills into real desktop applications.**  
+> A beginner-friendly desktop starter kit powered by **Next.js 16 (App Router)**, **Electron**, and **shadcn/ui**.
 
-Build your interface with the React and Next.js workflow you already know. When it is ready, turn it into a Windows, macOS, or Linux desktop app with a single command.
+If you know how to build a website with Next.js and React, you already know how to build a desktop app with Nextron. You write normal Next.js code, and Nextron packages it into a native Windows, macOS, or Linux application with a single command.
 
-## Why Nextron?
+Unlike most Electron starters that force static exports (`output: 'export'`), Nextron runs a self-contained Next.js server inside the packaged app. That means **Route Handlers (`/api/...`)**, **Server Actions (`"use server"`)**, and **Node.js APIs** work both during development **and** in your distributed desktop installer!
 
-Getting a web app into a desktop window often means wiring together two different environments. Nextron keeps that setup small and understandable:
+---
 
-- **Next.js 16 App Router** for your application interface
-- **Electron** for desktop capabilities such as windows, menus, files, and notifications
-- **Electron Forge** for packaging and installer creation
-- **shadcn/ui + Tailwind CSS** for project-owned, accessible UI components
-- **A secure default bridge** between your UI and native code
-- **One development command** to run Next.js and Electron together
+## ✨ Highlights
 
-## Quick start
+- ⚡ **Next.js 16 (Turbopack + App Router)**: Build your UI using the modern React patterns you already love.
+- 🖥️ **Full Server-Side Support**: API routes (`/api/...`) and Server Actions (`"use server"`) work after packaging.
+- 🎨 **shadcn/ui + Tailwind CSS**: Clean, accessible UI components you own in your codebase.
+- 🔒 **Secure by Default**: Node integration disabled in the renderer; safe IPC bridge via `window.desktop`.
+- 📦 **Optimized Packaging**: Tiny ASAR footprint (~10 KB) and fast installer creation with Electron Forge.
+- 🔄 **Hot Reloading**: Edit your code in `app/page.tsx` and see changes immediately inside the desktop window.
 
-### Requirements
+---
 
-- [Node.js](https://nodejs.org/) 20.9 or newer
-- npm (included with Node.js)
+## 🏁 Quick Start (5 Minutes)
 
-### Create your app
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) version `20.9` or higher.
+- `npm` (comes bundled with Node.js).
+
+### 1. Clone and Install
 
 ```bash
+# 1. Clone the starter
 git clone https://github.com/codeXnitro/nextron.git my-desktop-app
+
+# 2. Open the directory
 cd my-desktop-app
+
+# 3. Install dependencies
 npm install
+```
+
+### 2. Start Developing
+
+```bash
 npm run dev
 ```
 
-`npm run dev` starts the Next.js development server and opens the app in Electron. Edit `app/page.tsx` and your changes will refresh while you work.
+This single command starts the Next.js local server and automatically launches your desktop app in an Electron window with live hot reloading.
 
-## Commands
+> 💡 **Tip**: If you prefer testing in your regular browser (Chrome, Edge, etc.) without opening the Electron window, run:
+> ```bash
+> npm run dev:web
+> ```
+> and visit `http://localhost:3000`.
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Starts Next.js and Electron together for desktop development. |
-| `npm run dev:web` | Starts only the Next.js web preview. |
-| `npm run build` | Creates an optimized Next.js production build. |
-| `npm run package` | Creates a portable packaged desktop app. |
-| `npm run make` | Creates platform-specific distributables and installers in `out/make`. |
-| `npm run typecheck` | Checks TypeScript types. |
-| `npm run lint` | Checks code quality with ESLint. |
+---
 
-## Where to start editing
+## 🧭 Project Map: Where Do I Edit?
 
-| You want to… | Edit this file |
-| --- | --- |
-| Build your app screens | `app/page.tsx` |
-| Change the design | `app/globals.css` |
-| Add a safe desktop API | `electron/preload.cjs` |
-| Add Electron or native behaviour | `electron/main.cjs` |
-| Configure installers, icons, and signing | `forge.config.cjs` |
-| Rename your app, author, and package ID | `package.json` |
+You don't need to know Electron internals to start building. Here is where everything lives:
 
-## UI components included
+| What do you want to do? | Edit this file |
+| :--- | :--- |
+| **Change the UI / screens** | [`app/page.tsx`](app/page.tsx) |
+| **Add a new page (e.g. `/settings`)** | Create `app/settings/page.tsx` |
+| **Customize colors, fonts, or styling** | [`app/globals.css`](app/globals.css) |
+| **Add a backend API route** | [`app/api/system/route.ts`](app/api/system/route.ts) (or create new ones in `app/api/...`) |
+| **Add a Server Action** | [`app/actions/server-action.ts`](app/actions/server-action.ts) |
+| **Expose a native desktop feature to your UI** | [`electron/preload.cjs`](electron/preload.cjs) & [`electron/main.cjs`](electron/main.cjs) |
+| **Change app name, author, or version** | [`package.json`](package.json) |
+| **Configure installer settings & icons** | [`forge.config.cjs`](forge.config.cjs) |
 
-Nextron is configured for [shadcn/ui](https://ui.shadcn.com/). Its component source code lives in your project, so you can freely inspect and customize it instead of working around a black-box design system.
+---
 
-The starter includes `Button` and `Card` in `components/ui/`. Add more components whenever you need them:
+## 🛠️ How to Build Your App
 
-```bash
-npx shadcn@latest add input dialog form sonner
+### 1. Building UI Pages (Next.js App Router)
+
+Nextron uses the standard Next.js App Router. Add pages and components just like any web project:
+
+```tsx
+// app/page.tsx
+export default function HomePage() {
+  return (
+    <main className="p-8">
+      <h1 className="text-3xl font-bold">Hello Desktop!</h1>
+      <p className="text-muted-foreground mt-2">Built with Next.js 16.</p>
+    </main>
+  );
+}
 ```
 
-The `components.json` file already tells the shadcn CLI where to place components and how imports are organized.
+You can add new shadcn/ui components anytime using:
+```bash
+npx shadcn@latest add input dialog dropdown-menu
+```
 
-## Adding desktop features safely
+---
 
-Your React UI should not access Node.js or Electron directly. Nextron starts with a safer boundary: Node integration is disabled and context isolation is enabled.
+### 2. Using Server-Side Code (Route Handlers & Server Actions)
 
-To add a native feature:
+Because Nextron runs a standalone Node.js server in production, you can run server code and access Node.js capabilities (databases, file systems, etc.) safely on the backend:
 
-1. Handle the operation in `electron/main.cjs`.
-2. Expose one focused function in `electron/preload.cjs`.
-3. Call that function from your page through `window.desktop`.
+#### Option A: API Route Handlers (`/api/...`)
+Create a file at `app/api/hello/route.ts`:
+```ts
+// app/api/hello/route.ts
+import { NextResponse } from "next/server";
 
-The included version label and documentation button are small examples of this pattern.
+export async function GET() {
+  return NextResponse.json({ message: "Hello from local Next.js server!" });
+}
+```
+Fetch it from your React components using `fetch('/api/hello')`.
 
-## Build and share your app
+#### Option B: Server Actions (`"use server"`)
+Create a server action in `app/actions/notes.ts`:
+```ts
+// app/actions/notes.ts
+"use server";
 
-Before your first release, update these fields in `package.json`:
+export async function saveNote(text: string) {
+  // Runs on the local Node.js server
+  console.log("Saving note on server:", text);
+  return { success: true, timestamp: new Date().toISOString() };
+}
+```
+Call it directly like a regular async function from your React buttons or forms!
 
+---
+
+### 3. Calling Native Desktop Features (Electron Bridge)
+
+Your React UI runs inside a secure sandbox. To trigger native desktop operations (such as opening native file dialogs, reading window state, or launching external URLs), use the included `window.desktop` bridge:
+
+#### Example: Opening a link in the user's default browser
+```tsx
+<button onClick={() => window.desktop?.openExternal("https://nextjs.org")}>
+  Open Documentation
+</button>
+```
+
+#### How to add your own native desktop function:
+1. **Handle the event in [`electron/main.cjs`](electron/main.cjs)**:
+   ```javascript
+   ipcMain.handle("desktop:show-notification", (_event, title, body) => {
+     new Notification({ title, body }).show();
+   });
+   ```
+2. **Expose it safely in [`electron/preload.cjs`](electron/preload.cjs)**:
+   ```javascript
+   contextBridge.exposeInMainWorld("desktop", {
+     // existing functions...
+     showNotification: (title, body) => ipcRenderer.invoke("desktop:show-notification", title, body),
+   });
+   ```
+3. **Add the TypeScript definition in [`electron/types.d.ts`](electron/types.d.ts)**:
+   ```typescript
+   interface Window {
+     desktop?: {
+       showNotification(title: string, body: string): Promise<void>;
+     };
+   }
+   ```
+4. **Call it anywhere in your React code**:
+   ```tsx
+   window.desktop?.showNotification("Hello!", "This is a native desktop notification.");
+   ```
+
+---
+
+## 📦 Packaging & Creating an Installer
+
+When your application is ready to share with users:
+
+### Step 1: Update metadata in `package.json`
+Set your app name, version, and author:
 ```json
 {
-  "name": "your-app-name",
+  "name": "my-cool-app",
   "version": "1.0.0",
+  "description": "My first desktop application",
   "author": "Your Name <you@example.com>"
 }
 ```
 
-Then create a distributable:
-
+### Step 2: Build the installer
+Run the make command:
 ```bash
 npm run make
 ```
 
-Electron Forge places the results in `out/make`. The default Windows target creates a Squirrel installer; macOS and Debian maker settings are already included in `forge.config.cjs` for when you build on those platforms.
+### Step 3: Find your installer!
+Electron Forge automatically compiles your Next.js application, bundles the standalone server, and places your distributables in:
+- **Windows**: `out/make/squirrel.windows/x64/my-cool-app-1.0.0 Setup.exe`
+- **macOS**: `out/make/zip/darwin/x64/...`
+- **Linux**: `out/make/deb/x64/...`
 
-## Project structure
+You can send that `Setup.exe` directly to anyone to install and run your desktop app!
 
-```text
-app/                  Your Next.js pages and styles
-electron/
-  main.cjs            Main process: native desktop code and the app window
-  preload.cjs         The safe API bridge exposed to the renderer
-scripts/
-  prepare-desktop.mjs Copies Next assets into the packaged server
-forge.config.cjs      Electron Forge packaging configuration
-next.config.ts        Next standalone-server configuration
-```
+---
 
-## How production packaging works
+## 📜 All Available Commands
 
-Next.js creates a standalone server during `npm run build`. Nextron copies its required static and public assets into that server, then Electron Forge includes it as an application resource. In the packaged app, Electron starts the local Next server and loads it only after it is ready.
+| Command | What it does |
+| :--- | :--- |
+| `npm run dev` | Starts Next.js and Electron together with live hot-reloading. |
+| `npm run dev:web` | Starts only the Next.js preview in your browser at `http://localhost:3000`. |
+| `npm run build` | Builds the Next.js production bundle and copies standalone assets. |
+| `npm run package` | Builds and creates an unpacked, portable executable in `out/`. |
+| `npm run make` | Builds and generates complete platform installers (`.exe`, `.dmg`, `.deb`). |
+| `npm run typecheck` | Checks your TypeScript files for type errors (`tsc --noEmit`). |
+| `npm run lint` | Checks code formatting and catches potential bugs with ESLint. |
 
-That means you can use normal Next.js patterns during development while still distributing a self-contained desktop application.
+---
 
-## Next steps
+## ❓ Frequently Asked Questions (FAQ)
 
-- Replace the sample screen in `app/page.tsx` with your product.
-- Add a real icon and installer metadata in `forge.config.cjs`.
-- Add desktop features one small, safe API at a time.
-- Set up code signing before distributing broadly.
+<details>
+<summary><strong>Do I need to learn Electron to build my app?</strong></summary>
 
-## License
+No! For 95% of your work, you will simply build normal Next.js pages and React components inside `app/`. You only need to touch `electron/` when you want native OS powers like system tray icons, native menus, or file system dialogs.
+</details>
 
-MIT. See the `license` field in `package.json`.
+<details>
+<summary><strong>Can I use a local database like SQLite or Prisma?</strong></summary>
+
+Yes! Because Nextron runs a standalone Node.js server in the background, you can install and use SQLite (e.g., `better-sqlite3`), Prisma, or file-based storage in your Server Actions or Route Handlers.
+</details>
+
+<details>
+<summary><strong>Why not use Next.js static export (<code>output: 'export'</code>)?</strong></summary>
+
+Static export converts your site to plain HTML/CSS/JS files, which completely breaks Next.js Server Actions, Route Handlers (`/api/...`), and dynamic server rendering. Nextron runs Next.js in `output: 'standalone'` mode, giving you the full power of Next.js server features on desktop.
+</details>
+
+<details>
+<summary><strong>How do I add an app icon?</strong></summary>
+
+Place your `.ico` (Windows) or `.icns` (macOS) file in your assets folder, and set the `icon` path in [`forge.config.cjs`](forge.config.cjs) under `packagerConfig`.
+</details>
+
+---
+
+## 📄 License
+
+MIT License. Free to use for personal and commercial desktop applications.
