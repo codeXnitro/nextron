@@ -203,7 +203,12 @@ async function createWindow() {
   mainWindow.setAutoHideMenuBar(true);
 
   if (isDevelopment) {
+    // Clear stale HTTP cache so changes to source files always reflect immediately
+    // and the Turbopack HMR WebSocket can negotiate fresh headers.
+    await mainWindow.webContents.session.clearCache();
     await mainWindow.loadURL("http://127.0.0.1:3000");
+    // Open DevTools automatically in development to surface any errors.
+    mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     await mainWindow.loadURL(`http://127.0.0.1:${desktopServerPort}`);
   }
