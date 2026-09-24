@@ -6,3 +6,4 @@ makers
 *.log
 *.tsbuildinfo
 .env*.local
+data/

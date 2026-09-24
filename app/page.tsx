@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import {
   Activity,
   ArrowUpRight,
   Box,
   CheckCircle2,
   Cpu,
+  Database,
   Monitor,
   Moon,
   Server,
@@ -18,6 +20,7 @@ import { executeDesktopServerAction, type ServerActionResult } from "@/app/actio
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatabasePanel } from "@/components/database-panel";
 
 type ApiResponse = {
   status: string;
@@ -36,6 +39,7 @@ type ApiResponse = {
 
 const steps = [
   { icon: Monitor, title: "Build your interface", description: "Start with app/page.tsx and use the included shadcn/ui components." },
+  { icon: Database, title: "All-in-one Real-Time DB", description: "Use lib/db and useDatabase() hook for automatic real-time JSON storage." },
   { icon: Terminal, title: "Add desktop powers", description: "Expose safe native features through electron/preload.cjs." },
   { icon: Box, title: "Ship an installer", description: "Run npm run make when your app is ready to share." },
 ];
@@ -83,35 +87,47 @@ export default function Home() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-16 md:py-24">
+    <main className="mx-auto min-h-screen w-full max-w-6xl px-6 py-12 md:py-20 space-y-16">
       {/* Top Bar */}
-      <div className="mb-16 flex items-center justify-between gap-4 text-sm font-medium text-muted-foreground">
+      <div className="flex items-center justify-between gap-4 text-sm font-medium text-muted-foreground">
         <span className="flex items-center gap-2">
           <CheckCircle2 className="size-4 text-primary" /> {version}
         </span>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Toggle color theme"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/database" className="flex items-center gap-1.5">
+              <Database className="size-3.5 text-primary" /> Open DB Page
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Toggle color theme"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* Hero Section */}
       <section className="max-w-3xl">
         <p className="mb-4 text-sm font-semibold tracking-[0.18em] text-primary">
-          NEXT.JS 16 × ELECTRON × SHADCN/UI
+          NEXT.JS 16 × ELECTRON × REAL-TIME JSON DB
         </p>
         <h1 className="text-5xl font-bold tracking-tight text-balance md:text-7xl">
           Build web apps that live on the desktop.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-          A calm starting point for your first desktop app. Full Next.js server-side support (Route Handlers, Server Actions, Node APIs) running standalone in production.
+          A calm starting point for your first desktop app. Full Next.js server-side support, child component instant live reload, and an all-in-one real-time JSON database working seamlessly in dev and after build.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button onClick={() => window.desktop?.openExternal("https://ui.shadcn.com/docs")}>
+          <Button asChild>
+            <Link href="/database">
+              <Database className="size-4 mr-1.5" /> Database Manager
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={() => window.desktop?.openExternal("https://ui.shadcn.com/docs")}>
             Explore shadcn/ui <ArrowUpRight className="size-4" />
           </Button>
           <Button variant="outline" onClick={() => window.desktop?.openExternal("https://nextjs.org/docs")}>
@@ -120,17 +136,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Real-Time JSON Database Section */}
+      <section className="space-y-4">
+        <DatabasePanel />
+      </section>
+
       {/* Server-Side Verification Section */}
-      <section className="mt-16">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Server className="size-6 text-primary" /> Next.js Server-Side Verification
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Verify that Route Handlers (`/api/...`) and Server Actions (`&quot;use server&quot;`) execute on the local desktop server after build.
-            </p>
-          </div>
+      <section className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Server className="size-6 text-primary" /> Next.js Server-Side Verification
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Verify that Route Handlers (<code>/api/...</code>) and Server Actions (<code>&quot;use server&quot;</code>) execute on the local desktop server after build.
+          </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -226,7 +245,7 @@ export default function Home() {
       </section>
 
       {/* Steps */}
-      <section className="mt-20 grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         {steps.map(({ icon: Icon, title, description }, index) => (
           <Card key={title}>
             <CardHeader>
@@ -244,7 +263,7 @@ export default function Home() {
       </section>
 
       {/* Footer Card */}
-      <Card className="mt-8 bg-primary text-primary-foreground">
+      <Card className="bg-primary text-primary-foreground">
         <CardContent className="flex flex-col gap-4 p-7 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-medium opacity-75">YOUR DAILY COMMAND</p>

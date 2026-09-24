@@ -4,11 +4,24 @@ const nextConfig: NextConfig = {
   // Creates a small self-contained Next server for the packaged Electron app.
   output: "standalone",
 
-  // Electron loads the dev server via 127.0.0.1 (not localhost).
-  // Next.js 16 blocks cross-origin HMR/WebSocket requests by default, which
-  // breaks React hydration and live-reload inside the Electron window.
-  // Adding 127.0.0.1 here restores full hot-reload and client interactivity.
-  allowedDevOrigins: ["127.0.0.1"],
+  // Electron and browsers load via 127.0.0.1 or localhost.
+  // Next.js 16 dev server checks allowedDevOrigins for HMR/WebSocket connections.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
+
+  // Allow production build with Turbopack while supporting webpack watch configuration
+  turbopack: {},
+
+  // Configure webpack watch options to ensure instantaneous file detection
+  // on Windows filesystem for child components and dynamically added pages.
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        poll: 800,
+        aggregateTimeout: 200,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

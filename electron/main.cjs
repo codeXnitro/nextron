@@ -1,7 +1,9 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
+const { initDatabase } = require("./database.cjs");
 
 // Handle Squirrel installer events on Windows directly without external dependencies
 function handleSquirrelEvent() {
@@ -54,6 +56,46 @@ if (!hasSingleInstanceLock) {
   process.exit(0);
 }
 
+/**
+ * Resolves and ensures the database directory inside the application directory (app.getAppPath()).
+ * Works automatically in development, packaged app (.asar), and handles permissions.
+ */
+function getDatabaseDir() {
+  if (process.env.DATABASE_DIR) return process.env.DATABASE_DIR;
+
+  let baseDir;
+  try {
+    const appPath = app.getAppPath();
+    if (!app.isPackaged && !appPath.endsWith(".asar")) {
+      // In development: inside project workspace /data
+      baseDir = path.join(appPath, "data");
+    } else {
+      // In packaged app: appPath is .../resources/app.asar
+      // Store in .../resources/data or next to executable
+      const resourcesDir = path.dirname(appPath);
+      baseDir = path.join(resourcesDir, "data");
+    }
+
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir, { recursive: true });
+    }
+    fs.accessSync(baseDir, fs.constants.W_OK);
+    return baseDir;
+  } catch {
+    // Graceful fallback for Windows UAC protected Program Files installs
+    const fallback = path.join(app.getPath("userData"), "data");
+    if (!fs.existsSync(fallback)) {
+      fs.mkdirSync(fallback, { recursive: true });
+    }
+    return fallback;
+  }
+}
+
+// Initialize database in the application directory
+const dbDir = getDatabaseDir();
+process.env.DATABASE_DIR = dbDir;
+const db = initDatabase({ dataDir: dbDir });
+
 function findAvailablePort() {
   return new Promise((resolve, reject) => {
     const probe = net.createServer();
@@ -72,7 +114,7 @@ function stopServer() {
     nextServer = null;
     if (process.platform === "win32") {
       try {
-        spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" });
+        spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" });
       } catch {
         // Fallback
       }
@@ -90,7 +132,7 @@ async function startPackagedNextServer() {
   const serverDirectory = path.join(process.resourcesPath, "standalone");
   const serverFile = path.join(serverDirectory, "server.js");
 
-  if (!require("node:fs").existsSync(serverFile)) {
+  if (!fs.existsSync(serverFile)) {
     throw new Error(`Packaged Next.js standalone server is missing at:\n${serverFile}`);
   }
 
@@ -105,6 +147,7 @@ async function startPackagedNextServer() {
       HOSTNAME: "127.0.0.1",
       PORT: String(desktopServerPort),
       NODE_ENV: "production",
+      DATABASE_DIR: dbDir,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -203,11 +246,17 @@ async function createWindow() {
   mainWindow.setAutoHideMenuBar(true);
 
   if (isDevelopment) {
-    // Clear stale HTTP cache so changes to source files always reflect immediately
-    // and the Turbopack HMR WebSocket can negotiate fresh headers.
+    // Clear stale HTTP cache and prevent Chromium caching during dev
+    // so changes to child components, routes, and source files always reflect immediately
     await mainWindow.webContents.session.clearCache();
+    mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders["Cache-Control"] = "no-cache, no-store, must-revalidate";
+      details.requestHeaders["Pragma"] = "no-cache";
+      callback({ requestHeaders: details.requestHeaders });
+    });
+
     await mainWindow.loadURL("http://127.0.0.1:3000");
-    // Open DevTools automatically in development to surface any errors.
+    // Open DevTools automatically in development to surface any errors
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     await mainWindow.loadURL(`http://127.0.0.1:${desktopServerPort}`);
@@ -237,6 +286,26 @@ app.whenReady().then(async () => {
       throw new Error("Only HTTP(S) links may be opened from the app.");
     }
     await shell.openExternal(target.toString());
+  });
+
+  // Database IPC Handlers (All-in-one Packet Bomb)
+  ipcMain.handle("desktop:db:find", (_event, col, filter) => db.collection(col).find(filter));
+  ipcMain.handle("desktop:db:findOne", (_event, col, idOrFilter) => db.collection(col).findOne(idOrFilter));
+  ipcMain.handle("desktop:db:insert", (_event, col, doc) => db.collection(col).insert(doc));
+  ipcMain.handle("desktop:db:update", (_event, col, id, updates) => db.collection(col).update(id, updates));
+  ipcMain.handle("desktop:db:delete", (_event, col, id) => db.collection(col).delete(id));
+  ipcMain.handle("desktop:db:count", (_event, col, filter) => db.collection(col).count(filter));
+  ipcMain.handle("desktop:db:get", (_event, key, defaultValue) => db.get(key, defaultValue));
+  ipcMain.handle("desktop:db:set", (_event, key, value) => db.set(key, value));
+  ipcMain.handle("desktop:db:deleteKey", (_event, key) => db.deleteKey(key));
+  ipcMain.handle("desktop:db:stats", () => db.getStats());
+  ipcMain.handle("desktop:db:get-path", () => db.filePath);
+
+  // Broadcast real-time database changes to renderer window
+  db.subscribe((change) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("desktop:db:change", change);
+    }
   });
 
   await createWindow();
