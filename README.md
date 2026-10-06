@@ -1,475 +1,287 @@
 # Nextron 🚀
 
-> **Turn your Next.js skills into real desktop applications.**  
-> A beginner-friendly desktop starter kit powered by **Next.js 16 (App Router)**, **Electron**, **shadcn/ui**, and a built-in **real-time JSON database**.
+> **Turn your Next.js skills into production-grade desktop applications.**  
+> A state-of-the-art desktop framework combining **Next.js 16 (App Router + React 19)**, **Electron 37**, **shadcn/ui**, **Tailwind CSS 4**, and a **zero-promise, isomorphic real-time database**.
 
-If you know how to build a website with Next.js and React, you already know how to build a desktop app with Nextron. Write normal Next.js code — Nextron packages it into a native Windows, macOS, or Linux application with a single command.
+If you know how to build modern web apps with Next.js and React, you can build native desktop software with Nextron today. Write standard Next.js code—Nextron packages it into a native Windows (`.exe`), macOS (`.dmg`), or Linux (`.deb`) installer with a single command.
 
-Unlike most Electron starters that force static exports (`output: 'export'`), Nextron runs a self-contained Next.js server inside the packaged app. That means **Route Handlers (`/api/...`)**, **Server Actions (`"use server"`)**, **Node.js APIs**, and the **built-in real-time database** all work both during development **and** in your distributed desktop installer.
-
----
-
-## ✨ Highlights
-
-- ⚡ **Next.js 16 (App Router + Webpack HMR)**: Build your UI using modern React patterns. Child components and new pages update instantly in the desktop window — no restart needed.
-- 🖥️ **Full Server-Side Support**: API routes and Server Actions work after packaging.
-- 🗄️ **Real-Time JSON Database**: A zero-config, zero-dependency database built right in. Access it from React components, Server Actions, API routes, and Electron's main process simultaneously.
-- 🎨 **shadcn/ui + Tailwind CSS 4**: Clean, accessible UI components you own in your codebase.
-- 🔒 **Secure by Default**: Node integration is disabled in the renderer; a safe IPC bridge is provided via `window.desktop`.
-- 📦 **Optimized Packaging**: Tiny ASAR footprint and fast installer creation with Electron Forge.
+Unlike conventional Electron starters that require static HTML exports (`output: 'export'`), Nextron runs a **self-contained standalone Next.js server** inside the packaged application. That means **Route Handlers (`/api/...`)**, **Server Actions (`"use server"`)**, **Node.js APIs**, and the **unified real-time database** all work both in local development **and** in your distributed desktop installer.
 
 ---
 
-## 🏁 Quick Start (5 Minutes)
+## 🌟 What Makes This Kit Unbeatable?
 
-### Prerequisites
+### 1. 🗄️ Zero-Promise Isomorphic Database (`@/lib/db`)
+- **No Client vs Server Confusion**: Import `import { db, useCollection, useValue } from "@/lib/db"` anywhere—in Client Components (`"use client"`), Server Components (RSC), Server Actions (`"use server"`), API Routes, or the Electron Main process.
+- **Synchronous Zero-Promise Reads**: `db.collection('todos').find()` returns `Todo[]` **instantly** without `await`, without `useEffect` loading flicker, and without hydration mismatches.
+- **Instant Optimistic Writes**: `db.collection('todos').insert({ title: 'Task' })` updates memory and UI on the exact same frame, while persisting in the background! (Also dual-compatible so `await` works if you prefer!).
+- **MongoDB-Style Queries**: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$contains`, `$startsWith`, `$regex`, and full-text `_search`.
+- **Built-in Aggregations & Pagination**: `count()`, `sum()`, `avg()`, `min()`, `max()`, and `findPaginated()`.
 
-- [Node.js](https://nodejs.org/) version `20.9` or higher (comes with `npm`).
+### 2. 🎛️ Single JSON Configuration (`desktop.config.json`)
+- Never waste time updating multiple config files again!
+- Edit **`desktop.config.json`** to customize:
+  - App Name, Slug, Description, Version, and Author.
+  - Window dimensions, minimum width/height, title bar style, and background color.
+  - Installer names, icons, copyright, and platform build settings.
+- Automatically synchronizes `package.json`, `forge.config.cjs`, `electron/main.ts`, `components/desktop-titlebar.tsx`, and Next.js page metadata!
 
-### 1. Clone and Install
+### 3. 🛠️ Project Initializer App (No Git Clone Required!)
+- You don't even need to `git clone` this kit to start a new project!
+- Launch the visual Electron **Project Initializer GUI**:
+  ```bash
+  npm run init:app
+  # or: npm run creator
+  ```
+- Or run the interactive terminal CLI:
+  ```bash
+  npm run init:cli
+  ```
+- Browse to your desired directory, choose your app name and theme, click **"Initialize"**, and your new desktop app is scaffolded in seconds.
 
+### 4. 🪟 Production-Ready Desktop UI & Sidebar
+- **Hydration-Safe Sidebar**: Includes shadcn/ui Sidebar primitives in `components/ui/sidebar.tsx` and `components/app-sidebar.tsx`. Eliminates the common `useMemo` / `Math.random` skeleton hydration mismatch bug with deterministic widths.
+- **Custom Frameless Title Bar**: Native window drag regions (`app-drag` / `app-no-drag`), minimize, maximize/restore, close buttons, and macOS traffic lights support.
+- **Raycast-Style Command Palette (`Cmd+K` / `Ctrl+K`)**: Search commands, collections, and trigger OS actions.
+
+---
+
+## 🏁 Quick Start
+
+### Option A: Initialize a New Project (Recommended)
+You can use the built-in visual Initializer app to scaffold a brand new project anywhere on your computer:
 ```bash
-# 1. Clone the starter
-git clone https://github.com/codeXnitro/nextron.git my-desktop-app
-
-# 2. Open the project folder
-cd my-desktop-app
-
-# 3. Install all dependencies
-npm install
+npm run init:app
+```
+*Or use the terminal prompt:*
+```bash
+npm run init:cli
 ```
 
-### 2. Start Developing
-
+### Option B: Develop in This Workspace
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start Next.js + Electron with instant Hot Reload
 npm run dev
 ```
 
-This single command starts the Next.js local server and automatically launches your app in an Electron desktop window with **instant live hot-reloading** — edit any file and see changes immediately.
-
-> 💡 **Prefer testing in a browser?** Run `npm run dev:web` instead and visit `http://localhost:3000`. You won't have the native desktop features, but everything else (including the database) will work.
+> 💡 **Prefer testing in a browser?** Run `npm run dev:web` to open `http://localhost:3000`. Native OS features will gracefully adapt, and the real-time database and server actions remain fully functional.
 
 ---
 
-## 🧭 Project Map — Where Do I Edit?
+## 🗄️ Database Quick Reference: How to Use
 
-You don't need to know Electron internals to start building. Here is where everything lives:
+The database is 100% isomorphic and lives in `data/db.json`.
 
-| What do you want to do? | Edit this file |
-| :--- | :--- |
-| **Change the main screen / UI** | [`app/page.tsx`](app/page.tsx) |
-| **Add a new page** (e.g. `/settings`) | Create `app/settings/page.tsx` |
-| **Add a reusable UI component** | Create `components/my-component.tsx` |
-| **Customize colors, fonts, or styling** | [`app/globals.css`](app/globals.css) |
-| **Add a backend API route** | Create `app/api/my-route/route.ts` |
-| **Add a Server Action** | Create `app/actions/my-action.ts` |
-| **Use the database in React** | `import { useDatabase } from "@/lib/db/client"` |
-| **Use the database server-side** | `import { db } from "@/lib/db"` |
-| **Expose a native desktop feature** | [`electron/preload.cjs`](electron/preload.cjs) + [`electron/main.cjs`](electron/main.cjs) |
-| **Change app name, version, author** | [`package.json`](package.json) |
-| **Configure installer & icons** | [`forge.config.cjs`](forge.config.cjs) |
-
----
-
-## 🛠️ How to Build Your App
-
-### 1. Building UI Pages (Next.js App Router)
-
-Nextron uses the standard Next.js App Router. Add pages just like any web project:
-
-```tsx
-// app/settings/page.tsx
-export default function SettingsPage() {
-  return (
-    <main className="p-8">
-      <h1 className="text-3xl font-bold">Settings</h1>
-      <p className="text-muted-foreground mt-2">Your settings go here.</p>
-    </main>
-  );
-}
-```
-
-That's it — navigate to `/settings` and it works. You can add new shadcn/ui components anytime:
-
-```bash
-npx shadcn@latest add dialog input dropdown-menu
-```
-
----
-
-### 2. The Real-Time JSON Database 🗄️
-
-Nextron includes a built-in, zero-dependency, real-time JSON database stored as a plain `db.json` file in your app directory. No setup required — it starts automatically.
-
-**The database is accessible from everywhere:**
-
-| Location | How to use |
-| :--- | :--- |
-| React component (client-side) | `useDatabase()` hook or `dbClient` from `@/lib/db/client` |
-| Server Action (`"use server"`) | `import { db } from "@/lib/db"` |
-| API Route Handler | `import { db } from "@/lib/db"` |
-| Electron Main Process | `db` returned by `initDatabase()` in `electron/database.cjs` |
-
-#### Option A: React Hook (recommended for UI components)
-
-The `useDatabase()` hook fetches data and keeps it in sync in real time across all open windows and access layers.
-
+### 1. In React Client Components (`useCollection`)
+Zero promises, zero suspense hassle, zero loading flash:
 ```tsx
 "use client";
 
-import { useDatabase } from "@/lib/db/client";
+import { useCollection } from "@/lib/db";
 
-type Note = { id: string; text: string; createdAt: string; updatedAt: string };
+interface Todo {
+  id: string;
+  title: string;
+  completed: boolean;
+}
 
-export default function NotesPage() {
-  const { data: notes, loading, insert, remove, update } = useDatabase<Note>("notes");
-
-  const addNote = () => insert({ text: "My new note" });
-
-  if (loading) return <p>Loading...</p>;
+export function TodoList() {
+  const { items, insert, update, remove, count } = useCollection<Todo>("todos");
 
   return (
     <div>
-      <button onClick={addNote}>Add Note</button>
-      {notes.map((note) => (
-        <div key={note.id}>
-          <p>{note.text}</p>
-          <button onClick={() => remove(note.id)}>Delete</button>
-        </div>
-      ))}
+      <div className="flex justify-between items-center mb-4">
+        <h2>Tasks ({count})</h2>
+        <button onClick={() => insert({ title: "New Task", completed: false })}>
+          Add Task
+        </button>
+      </div>
+
+      <ul>
+        {items.map((todo) => (
+          <li key={todo.id} className="flex gap-2 items-center">
+            <input
+              type="checkbox"
+              checked={todo.completed}
+              onChange={(e) => update(todo.id, { completed: e.target.checked })}
+            />
+            <span>{todo.title}</span>
+            <button onClick={() => remove(todo.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 ```
 
-**The hook returns:**
-
-| Property | Type | Description |
-| :--- | :--- | :--- |
-| `data` | `T[]` | The live array of documents in the collection |
-| `loading` | `boolean` | `true` while the first fetch is in progress |
-| `error` | `Error \| null` | Any error that occurred |
-| `insert(doc)` | `async (doc) => T` | Add a new document (ID auto-generated) |
-| `update(id, changes)` | `async (id, changes) => T` | Update fields on a document by ID |
-| `remove(id)` | `async (id) => boolean` | Delete a document by ID |
-| `refresh()` | `async () => void` | Manually re-fetch the collection |
-
-#### Option B: Server Action (for mutations from server)
-
-```ts
-// app/actions/notes-action.ts
-"use server";
-
+### 2. In Server Components, Server Actions, or Route Handlers (`db`)
+Synchronous, instant, zero-promise queries:
+```tsx
 import { db } from "@/lib/db";
 
-export async function saveNoteAction(text: string) {
-  const note = await db.collection("notes").insert({ text });
-  return { success: true, note };
+// Server Component (RSC) or Server Action
+export async function getActiveTodos() {
+  // Synchronous read - no await needed!
+  const todos = db.collection("todos").find({ completed: false });
+  return todos;
 }
 
-export async function deleteNoteAction(id: string) {
-  return db.collection("notes").delete(id);
-}
-```
-
-Call it from your React component like a normal async function — Next.js handles the RPC automatically.
-
-#### Option C: Key-Value Storage (for simple settings)
-
-For storing a single value (like a setting or preference) instead of a collection:
-
-```tsx
-"use client";
-import { useKeyValue } from "@/lib/db/client";
-
-export function ThemeSelector() {
-  const [colorTheme, setColorTheme, loading] = useKeyValue<string>("userColorTheme", "blue");
-
-  return (
-    <select value={colorTheme} onChange={(e) => setColorTheme(e.target.value)}>
-      <option value="blue">Blue</option>
-      <option value="purple">Purple</option>
-    </select>
-  );
+// Server Action
+export async function addTodoAction(title: string) {
+  // Instant write - returns the created document immediately!
+  const newTodo = db.collection("todos").insert({
+    title,
+    completed: false,
+    source: "Server Action",
+  });
+  return newTodo;
 }
 ```
 
-#### How the database works
-
-- **Location (dev)**: `data/db.json` in your project root.
-- **Location (packaged app)**: `resources/data/db.json` next to the installed executable (writable by the user).
-- **Format**: Plain human-readable JSON — open it in any text editor to inspect or edit data directly.
-- **Real-time sync**: All layers (Electron main, Next.js server, React client) share the same file. Changes in one layer are detected by file-watching and broadcast to all others in milliseconds.
-- **Safe writes**: All writes use an atomic temp-file-then-rename strategy to prevent corruption.
-
----
-
-### 3. Server-Side Code (Route Handlers & Server Actions)
-
-Because Nextron runs a standalone Node.js server in production, you can safely run server code:
-
-#### API Route Handler
-
-Create a file at `app/api/hello/route.ts`:
-
+### 3. Advanced Querying Examples
 ```ts
-import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
-export async function GET() {
-  return NextResponse.json({ message: "Hello from the local Next.js server!" });
-}
-```
+const collection = db.collection("products");
 
-Fetch it from any React component:
+// 1. Filtering with operators
+const inStock = collection.find({
+  price: { $gte: 20, $lte: 100 },
+  category: { $in: ["electronics", "software"] }
+});
 
-```tsx
-const res = await fetch("/api/hello");
-const data = await res.json();
-```
+// 2. Full-text search
+const searchResults = collection.find({ _search: "camera" });
 
-#### Server Action
+// 3. Sorting & Pagination
+const pageOne = collection.findPaginated(
+  { inStock: true },
+  { sort: "price", order: "asc", page: 1, limit: 10 }
+);
 
-```ts
-// app/actions/my-action.ts
-"use server";
+// 4. Aggregations
+const totalCount = collection.count();
+const avgPrice = collection.avg("price");
+const minPrice = collection.min("price");
+const maxPrice = collection.max("price");
 
-export async function processData(input: string) {
-  // This runs on the local Node.js server — even in the packaged app!
-  return { result: input.toUpperCase(), at: new Date().toISOString() };
-}
-```
-
-```tsx
-// Call it from any component
-import { processData } from "@/app/actions/my-action";
-
-const result = await processData("hello");
+// 5. Key-Value Store
+db.set("settings.theme", "dark");
+const currentTheme = db.get("settings.theme", "dark");
 ```
 
 ---
 
-### 4. Calling Native Desktop Features (Electron Bridge)
+## ⚙️ Customizing Your Desktop App (`desktop.config.json`)
 
-Your React UI runs in a secure sandbox. To use native OS features (file dialogs, notifications, system info), use the `window.desktop` bridge:
+To change your app name, version, window size, or build configuration, **edit `desktop.config.json`**:
 
-```tsx
-// Open a URL in the user's default browser
-<button onClick={() => window.desktop?.openExternal("https://nextjs.org")}>
-  Open Docs
-</button>
-```
-
-#### How to add your own native feature (step-by-step)
-
-**Step 1** — Handle it in [`electron/main.cjs`](electron/main.cjs):
-```javascript
-ipcMain.handle("desktop:show-notification", (_event, title, body) => {
-  new Notification({ title, body }).show();
-});
-```
-
-**Step 2** — Expose it safely in [`electron/preload.cjs`](electron/preload.cjs):
-```javascript
-contextBridge.exposeInMainWorld("desktop", {
-  // ... existing functions ...
-  showNotification: (title, body) =>
-    ipcRenderer.invoke("desktop:show-notification", title, body),
-});
-```
-
-**Step 3** — Add the TypeScript type in [`electron/types.d.ts`](electron/types.d.ts):
-```typescript
-declare global {
-  interface Window {
-    desktop?: {
-      // ... existing types ...
-      showNotification(title: string, body: string): Promise<void>;
-    };
+```json
+{
+  "app": {
+    "name": "My Desktop App",
+    "slug": "my-desktop-app",
+    "version": "1.0.0",
+    "description": "My stunning cross-platform app",
+    "author": {
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    },
+    "bundleId": "com.janedoe.mydesktopapp"
+  },
+  "window": {
+    "title": "My Desktop App",
+    "width": 1280,
+    "height": 840,
+    "minWidth": 920,
+    "minHeight": 620,
+    "backgroundColor": "#090d16",
+    "titleBarStyle": "hidden",
+    "frame": false
+  },
+  "database": {
+    "filename": "db.json",
+    "autoBackup": true
+  },
+  "build": {
+    "icon": "./public/icon",
+    "copyright": "Copyright © 2026 Jane Doe"
   }
 }
 ```
 
-**Step 4** — Call it from any React component:
+When you run `npm run dev` or `npm run build`, `package.json` and all Electron Forge configurations update automatically.
+
+---
+
+## 🖥️ Native OS Capabilities (`window.desktop`)
+
+You can call native desktop features from any client component via `window.desktop`:
+
 ```tsx
-window.desktop?.showNotification("Saved!", "Your file has been saved.");
+// 1. Native File Dialog
+const res = await window.desktop?.dialog.showOpenDialog({
+  title: "Select an Image",
+  filters: [{ name: "Images", extensions: ["png", "jpg"] }],
+});
+
+// 2. Native OS Notifications
+window.desktop?.notification.show("Download Complete", "Your export is ready!");
+
+// 3. System Clipboard
+await window.desktop?.clipboard.writeText("Copied from Nextron!");
+const text = await window.desktop?.clipboard.readText();
+
+// 4. Reveal in File Explorer / Finder
+await window.desktop?.shell.showItemInFolder("C:\\path\\to\\file.txt");
+
+// 5. Open External Links in Default Browser
+await window.desktop?.openExternal("https://github.com");
+
+// 6. Window Controls
+window.desktop?.window.minimize();
+window.desktop?.window.toggleMaximize();
+window.desktop?.window.close();
 ```
 
 ---
 
-## 📦 Packaging — Creating an Installer
+## 📦 Building & Distributing Installers
 
-When your application is ready to ship:
-
-### Step 1: Update your app metadata in `package.json`
-
-```json
-{
-  "name": "my-cool-app",
-  "version": "1.0.0",
-  "description": "My first desktop application",
-  "author": "Your Name <you@example.com>"
-}
-```
-
-### Step 2: Build and create an installer
+To package your desktop app into native production installers:
 
 ```bash
+# Generate production installer for your current OS:
 npm run make
 ```
 
-This automatically:
-1. Builds the Next.js production bundle
-2. Bundles the standalone server and all assets
-3. Creates a platform-native installer
-
-### Step 3: Find your installer
-
-Your distributable files appear in the `out/make/` directory:
-
-- **Windows**: `out/make/squirrel.windows/x64/my-cool-app-1.0.0 Setup.exe`
-- **macOS**: `out/make/zip/darwin/x64/...`
-- **Linux**: `out/make/deb/x64/...`
-
-Send the `Setup.exe` to anyone — they install and run your app without needing Node.js.
-
-> 💡 **Note**: The database file (`db.json`) is created fresh the first time users run your packaged app. It is stored in a writable location next to the executable, not inside the installer itself.
+- **Windows**: Produces a standalone Squirrel installer (`.exe`) in `out/make/squirrel.windows/x64/`.
+- **macOS**: Produces a `.dmg` and `.zip` in `out/make/`.
+- **Linux**: Produces a Debian package (`.deb`) in `out/make/deb/x64/`.
 
 ---
 
-## 📜 All Available Commands
+## 📜 All Available Scripts
 
-| Command | What it does |
+| Script | Purpose |
 | :--- | :--- |
-| `npm run dev` | Starts Next.js + Electron together with live hot-reloading |
-| `npm run dev:web` | Starts only the Next.js server in your browser (`http://localhost:3000`) |
-| `npm run build` | Builds the Next.js production bundle (runs automatically before `make`) |
-| `npm run package` | Builds and creates an unpacked portable executable in `out/` |
-| `npm run make` | Builds and generates complete platform installers (`.exe`, `.dmg`, `.deb`) |
-| `npm run typecheck` | Checks all TypeScript files for type errors |
-| `npm run lint` | Checks code style and catches potential bugs with ESLint |
+| `npm run dev` | Starts Next.js and Electron with live watch and hot reload |
+| `npm run dev:web` | Starts Next.js development server in web browser mode |
+| `npm run init:app` | Launches the visual Electron Project Initializer GUI |
+| `npm run init:cli` | Launches the interactive terminal project initializer |
+| `npm run sync:config` | Synchronizes `desktop.config.json` into `package.json` |
+| `npm run build` | Compiles Electron TypeScript and builds standalone Next.js server |
+| `npm run make` | Packages the application into native OS installers (`.exe`, `.dmg`, `.deb`) |
+| `npm run typecheck` | Validates TypeScript across Next.js and Electron |
+| `npm run lint` | Runs ESLint with zero-error validation |
+| `npm run clean` | Cleans `.next` and `out` build cache |
 
 ---
 
-## 📁 Project Structure
+## 🛡️ License
 
-```
-nextron/
-├── app/                        # Next.js App Router (your UI lives here)
-│   ├── actions/                # Server Actions ("use server" functions)
-│   │   ├── server-action.ts    # Example Server Action
-│   │   └── db-action.ts        # Database Server Actions (create/toggle/delete)
-│   ├── api/                    # Route Handlers (REST API endpoints)
-│   │   ├── db/route.ts         # Database REST API (/api/db)
-│   │   ├── db/stream/route.ts  # Real-time SSE stream for web clients
-│   │   └── system/route.ts     # System info demo route (/api/system)
-│   ├── database/page.tsx       # Dedicated /database page
-│   ├── globals.css             # Global CSS + Tailwind theme tokens
-│   ├── layout.tsx              # Root layout with ThemeProvider
-│   └── page.tsx                # Home page (/)
-│
-├── components/                 # Reusable React components
-│   ├── database-panel.tsx      # Interactive real-time DB demo panel
-│   ├── theme-provider.tsx      # Dark/light theme context
-│   └── ui/                     # shadcn/ui components (button, card, etc.)
-│
-├── lib/
-│   └── db/                     # Real-Time JSON Database SDK
-│       ├── engine.ts           # Core DB engine (TypeScript, for server-side)
-│       ├── client.ts           # Client SDK: useDatabase(), useKeyValue() hooks
-│       ├── types.ts            # Shared TypeScript interfaces
-│       └── index.ts            # Exports singleton `db` instance
-│
-├── electron/                   # Electron-specific files (touch only for native features)
-│   ├── main.cjs                # Main process: window, IPC handlers, DB init
-│   ├── preload.cjs             # Preload script: exposes window.desktop bridge
-│   ├── database.cjs            # CJS mirror of the DB engine for the main process
-│   └── types.d.ts              # TypeScript types for window.desktop
-│
-├── scripts/
-│   └── prepare-desktop.mjs    # Postbuild: copies static assets into standalone/
-│
-├── data/                       # Auto-created at runtime (gitignored)
-│   └── db.json                 # Your app's real-time database file
-│
-├── forge.config.cjs            # Electron Forge packaging & installer config
-├── next.config.ts              # Next.js config (HMR origins, webpack watch, standalone)
-├── package.json                # Scripts, dependencies, app metadata
-└── tsconfig.json               # TypeScript config
-```
-
----
-
-## ❓ Frequently Asked Questions
-
-<details>
-<summary><strong>Do I need to learn Electron to build my app?</strong></summary>
-
-No! For 95% of your work, you build normal Next.js pages and React components inside `app/`. You only need to touch `electron/` when you want native OS powers like system tray icons, native menus, or file system dialogs.
-</details>
-
-<details>
-<summary><strong>Where is the database file stored?</strong></summary>
-
-- **During development**: `data/db.json` in your project root. You can open it in any text editor to inspect or manually edit your data.
-- **In the packaged/installed app**: In a writable `data/` folder next to the application's resources directory (e.g., `C:\Program Files\MyApp\resources\data\db.json` on Windows). If that path isn't writable (e.g., due to UAC), it automatically falls back to the user's app data directory.
-
-The `data/` folder is listed in `.gitignore` and is never committed to version control.
-</details>
-
-<details>
-<summary><strong>How do I see what's in the database right now?</strong></summary>
-
-Three ways:
-1. Open `data/db.json` in any text editor — it's plain, human-readable JSON.
-2. In the running app, click **"Inspect db.json"** in the Database Panel on the home page to see a live view.
-3. Fetch `GET /api/db?stats=true` or `GET /api/db?collection=todos` in your browser's DevTools network tab.
-</details>
-
-<details>
-<summary><strong>Is the database good for production apps?</strong></summary>
-
-The built-in JSON database is a great fit for:
-- Personal desktop tools and productivity apps
-- Apps with hundreds to low thousands of documents per collection
-- Any data that can comfortably fit in a single JSON file
-
-For apps with heavy write throughput, large datasets, or complex relational queries, consider upgrading to SQLite (e.g., `better-sqlite3`) or Prisma — both work perfectly in Nextron since the standalone Node.js server is fully functional.
-</details>
-
-<details>
-<summary><strong>Why not use Next.js static export (<code>output: 'export'</code>)?</strong></summary>
-
-Static export converts your app to plain HTML/CSS/JS files, which completely breaks Server Actions, Route Handlers (`/api/...`), and the real-time database. Nextron uses `output: 'standalone'` mode, giving you the full power of Next.js server features on the desktop — including after packaging.
-</details>
-
-<details>
-<summary><strong>My changes aren't showing up in the Electron window — what do I do?</strong></summary>
-
-This is already fixed in this starter! The dev script uses `--webpack` for reliable HMR on Windows, and Electron is configured to skip HTTP caching in development mode.
-
-If you're still seeing stale content:
-1. Make sure you're running `npm run dev` (not just opening Electron manually).
-2. Try pressing `Ctrl+R` (or `Cmd+R` on macOS) in the Electron window to force a full reload.
-3. Check the terminal for any Next.js compilation errors.
-</details>
-
-<details>
-<summary><strong>How do I add an app icon?</strong></summary>
-
-1. Create your icon: `.ico` for Windows, `.icns` for macOS, `.png` for Linux.
-2. Place it in your project (e.g., `public/icon.ico`).
-3. Add the `icon` path to `packagerConfig` in [`forge.config.cjs`](forge.config.cjs):
-   ```javascript
-   packagerConfig: {
-     asar: true,
-     icon: "./public/icon", // Electron Forge adds the correct extension per platform
-     // ...
-   }
-   ```
-</details>
-
----
-
-## 📄 License
-
-MIT License. Free to use for personal and commercial desktop applications.
+MIT License. Crafted for high-velocity software engineering.

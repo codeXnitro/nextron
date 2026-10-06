@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/overview/schema.json",
+  "entry": [
+    "app/**/page.tsx",
+    "app/**/layout.tsx",
+    "app/api/**/route.ts",
+    "electron/main.ts",
+    "electron/preload.ts",
+    "scripts/**/*.mjs"
+  ],
+  "project": ["**/*.{ts,tsx,js,mjs}"],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "@tailwindcss/postcss",
+    "postcss",
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "electron-squirrel-startup",
+    "@electron-forge/maker-deb",
+    "@electron-forge/maker-dmg",
+    "@electron-forge/maker-squirrel",
+    "@electron-forge/maker-zip"
+  ]
+}

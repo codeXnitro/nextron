@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nextron Desktop Configuration",
+  "description": "Configuration schema for Nextron Next.js 16 + Electron Desktop Starter Kit",
+  "type": "object",
+  "required": ["app", "window", "build"],
+  "properties": {
+    "app": {
+      "type": "object",
+      "required": ["name", "slug", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The user-facing name of the desktop application"
+        },
+        "slug": {
+          "type": "string",
+          "description": "Package / binary slug name (lowercase, no spaces, e.g. 'my-desktop-app')"
+        },
+        "version": {
+          "type": "string",
+          "description": "Application version (semver, e.g. '1.0.0')"
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description of the application"
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "email": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "bundleId": {
+          "type": "string",
+          "description": "Unique OS bundle identifier, e.g. 'com.company.app'"
+        },
+        "category": {
+          "type": "string",
+          "description": "Application category, e.g. 'public.app-category.developer-tools'"
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Default window title" },
+        "width": { "type": "number", "default": 1280, "description": "Initial window width in pixels" },
+        "height": { "type": "number", "default": 840, "description": "Initial window height in pixels" },
+        "minWidth": { "type": "number", "default": 920, "description": "Minimum allowed window width" },
+        "minHeight": { "type": "number", "default": 620, "description": "Minimum allowed window height" },
+        "backgroundColor": { "type": "string", "default": "#090d16", "description": "Window background color hex" },
+        "titleBarStyle": {
+          "type": "string",
+          "enum": ["hidden", "hiddenInset", "default", "customButtonsOnHover"],
+          "default": "hidden"
+        },
+        "frame": { "type": "boolean", "default": false, "description": "Show native OS frame and titlebar" },
+        "resizable": { "type": "boolean", "default": true },
+        "maximizable": { "type": "boolean", "default": true },
+        "minimizable": { "type": "boolean", "default": true },
+        "center": { "type": "boolean", "default": true }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "filename": { "type": "string", "default": "db.json" },
+        "autoBackup": { "type": "boolean", "default": true },
+        "backupIntervalMinutes": { "type": "number", "default": 60 }
+      }
+    },
+    "build": {
+      "type": "object",
+      "properties": {
+        "icon": {
+          "type": "string",
+          "description": "Path to base icon without extension (Forge will resolve .ico for Windows, .icns for macOS, .png for Linux)"
+        },
+        "copyright": { "type": "string" },
+        "windows": {
+          "type": "object",
+          "properties": {
+            "productName": { "type": "string" },
+            "executableName": { "type": "string" },
+            "setupExe": { "type": "string" }
+          }
+        },
+        "mac": {
+          "type": "object",
+          "properties": {
+            "category": { "type": "string" }
+          }
+        },
+        "linux": {
+          "type": "object",
+          "properties": {
+            "maintainer": { "type": "string" },
+            "section": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

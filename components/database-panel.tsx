@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
+import { useIsClient } from "@/lib/utils";
 import {
   Database,
   Radio,
@@ -18,7 +19,7 @@ import {
   RefreshCw,
   FolderOpen,
 } from "lucide-react";
-import { useDatabase, useDatabaseStats, isDesktopApp, dbClient } from "@/lib/db/client";
+import { useCollection, useDatabaseStats, isDesktopApp, db } from "@/lib/db";
 import { createTodoServerAction, deleteTodoServerAction, toggleTodoServerAction } from "@/app/actions/db-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,7 @@ type TodoItem = {
 };
 
 export function DatabasePanel() {
-  const { data: todos, loading, insert, remove, update, refresh } = useDatabase<TodoItem>("todos");
+  const { data: todos, loading, insert, remove, update, refresh } = useCollection<TodoItem>("todos");
   const { stats, refresh: refreshStats } = useDatabaseStats();
 
   const [inputTitle, setInputTitle] = useState("");
@@ -44,12 +45,8 @@ export function DatabasePanel() {
   const [showRawJson, setShowRawJson] = useState(false);
   const [lastActionLog, setLastActionLog] = useState<string>("System ready. Real-time sync active.");
 
-  // Start false to match SSR — update after mount to avoid hydration mismatch.
-  // isDesktopApp() reads window.desktop which doesn't exist during server rendering.
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    setIsDesktop(isDesktopApp());
-  }, []);
+  const isClient = useIsClient();
+  const isDesktop = isClient && isDesktopApp();
 
   const handleAddViaClient = async () => {
     if (!inputTitle.trim()) return;

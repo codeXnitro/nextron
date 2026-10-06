@@ -1,0 +1,50 @@
+{
+  "$schema": "./desktop.config.schema.json",
+  "app": {
+    "name": "Nextron",
+    "slug": "nextron",
+    "version": "1.0.0",
+    "description": "Production Desktop Application built with Next.js 16 and Electron",
+    "author": {
+      "name": "Nextron Team",
+      "email": "team@example.com"
+    },
+    "bundleId": "com.nextron.desktop",
+    "category": "public.app-category.developer-tools"
+  },
+  "window": {
+    "title": "Nextron Desktop",
+    "width": 1280,
+    "height": 840,
+    "minWidth": 920,
+    "minHeight": 620,
+    "backgroundColor": "#090d16",
+    "titleBarStyle": "hidden",
+    "frame": false,
+    "resizable": true,
+    "maximizable": true,
+    "minimizable": true,
+    "center": true
+  },
+  "database": {
+    "filename": "db.json",
+    "autoBackup": true,
+    "backupIntervalMinutes": 60
+  },
+  "build": {
+    "icon": "./public/icon",
+    "copyright": "Copyright © 2026 Nextron Team",
+    "windows": {
+      "productName": "Nextron",
+      "executableName": "nextron",
+      "setupExe": "Nextron-Setup.exe"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "maintainer": "Nextron Team <team@example.com>",
+      "section": "utils"
+    }
+  }
+}
