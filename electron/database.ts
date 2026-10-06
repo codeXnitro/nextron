@@ -1,16 +1,8 @@
+﻿// Zero-dependency, atomic, real-time JSON database engine for Electron Main Process
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { EventEmitter } from "node:events";
-import type {
-  DatabaseDoc,
-  DbChangeEvent,
-  DbCollection,
-  DbStats,
-  PaginatedResult,
-  QueryFilter,
-  QueryOptions,
-} from "./types";
 
 export interface DatabaseOptions {
   dataDir?: string;
@@ -18,10 +10,40 @@ export interface DatabaseOptions {
   debounceMs?: number;
 }
 
+interface DbMeta {
+  version: number;
+  rev: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DbCache {
+  _meta: DbMeta;
+  [key: string]: any;
+}
+
+export interface DbChangeEvent {
+  action: string;
+  collection?: string | null;
+  id?: string | null;
+  key?: string | null;
+  data?: any;
+  count?: number;
+  deletedCount?: number;
+  updatedCount?: number;
+  rev: number;
+  timestamp: string;
+}
+
 function matchesCondition(actual: any, condition: any): boolean {
   if (condition === undefined) return true;
 
-  if (typeof condition === "object" && condition !== null && !Array.isArray(condition) && !(condition instanceof Date)) {
+  if (
+    typeof condition === "object" &&
+    condition !== null &&
+    !Array.isArray(condition) &&
+    !(condition instanceof Date)
+  ) {
     const keys = Object.keys(condition);
     const hasOperators = keys.some((k) => k.startsWith("$"));
 
@@ -53,13 +75,22 @@ function matchesCondition(actual: any, condition: any): boolean {
             if (Array.isArray(val) && val.includes(actual)) return false;
             break;
           case "$contains":
-            if (typeof actual !== "string" || !actual.toLowerCase().includes(String(val).toLowerCase())) return false;
+            if (
+              typeof actual !== "string" ||
+              !actual.toLowerCase().includes(String(val).toLowerCase())
+            )
+              return false;
             break;
           case "$startsWith":
-            if (typeof actual !== "string" || !actual.toLowerCase().startsWith(String(val).toLowerCase())) return false;
+            if (
+              typeof actual !== "string" ||
+              !actual.toLowerCase().startsWith(String(val).toLowerCase())
+            )
+              return false;
             break;
           case "$regex": {
-            const regex = typeof val === "string" ? new RegExp(val, "i") : (val as RegExp);
+            const regex =
+              typeof val === "string" ? new RegExp(val, "i") : (val as RegExp);
             if (!regex.test(String(actual ?? ""))) return false;
             break;
           }
@@ -74,14 +105,13 @@ function matchesCondition(actual: any, condition: any): boolean {
   return actual === condition;
 }
 
-function matchesFilter<T>(item: T, filter?: QueryFilter<T>): boolean {
+function matchesFilter(item: any, filter?: Record<string, any>): boolean {
   if (!filter || Object.keys(filter).length === 0) return true;
 
-  // Global search across string fields
   if (filter._search && typeof filter._search === "string") {
     const term = filter._search.toLowerCase().trim();
     if (term) {
-      const matchFound = Object.values(item as Record<string, any>).some((val) => {
+      const matchFound = Object.values(item).some((val) => {
         if (typeof val === "string") return val.toLowerCase().includes(term);
         if (typeof val === "number") return String(val).includes(term);
         return false;
@@ -92,18 +122,22 @@ function matchesFilter<T>(item: T, filter?: QueryFilter<T>): boolean {
 
   for (const [key, expected] of Object.entries(filter)) {
     if (key.startsWith("_")) continue;
-    const actual = (item as Record<string, any>)[key];
+    const actual = item[key];
     if (!matchesCondition(actual, expected)) return false;
   }
 
   return true;
 }
 
-function sortItems<T>(items: T[], sortField?: string, order: "asc" | "desc" = "asc"): T[] {
+function sortItems<T extends Record<string, any>>(
+  items: T[],
+  sortField: string,
+  order: "asc" | "desc" = "asc"
+): T[] {
   if (!sortField) return items;
   return [...items].sort((a, b) => {
-    const valA = (a as Record<string, any>)[sortField];
-    const valB = (b as Record<string, any>)[sortField];
+    const valA = a[sortField];
+    const valB = b[sortField];
     if (valA === valB) return 0;
     if (valA === undefined || valA === null) return 1;
     if (valB === undefined || valB === null) return -1;
@@ -112,38 +146,40 @@ function sortItems<T>(items: T[], sortField?: string, order: "asc" | "desc" = "a
   });
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export class JsonDatabaseEngine extends EventEmitter {
-  public dataDir: string;
-  public filePath: string;
-  public debounceMs: number;
-  private cache: Record<string, any> = {
-    _meta: {
-      version: 2,
-      rev: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  };
-  private isLoaded = false;
-  private writeQueue: Promise<void> = Promise.resolve();
-  private fileWatcher: fs.FSWatcher | null = null;
-  private lastDiskMtime = 0;
-  private internalSave = false;
+class JsonDatabaseEngine extends EventEmitter {
+  dataDir: string;
+  filePath: string;
+  private debounceMs: number;
+  private cache: DbCache;
+  private isLoaded: boolean;
+  private writeQueue: Promise<void>;
+  private fileWatcher: fs.FSWatcher | null;
+  private lastDiskMtime: number;
+  private internalSave: boolean;
 
   constructor(options: DatabaseOptions = {}) {
     super();
-    this.dataDir = options.dataDir || process.env.DATABASE_DIR || path.join(process.cwd(), "data");
-    this.filePath = path.join(/*turbopackIgnore: true*/ this.dataDir, options.filename || "db.json");
+    this.dataDir = options.dataDir || path.join(process.cwd(), "data");
+    this.filePath = path.join(this.dataDir, options.filename || "db.json");
     this.debounceMs = options.debounceMs || 50;
+    this.cache = {
+      _meta: {
+        version: 2,
+        rev: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    this.isLoaded = false;
+    this.writeQueue = Promise.resolve();
+    this.fileWatcher = null;
+    this.lastDiskMtime = 0;
+    this.internalSave = false;
 
     this.init();
   }
 
-  private init() {
+  private init(): void {
     try {
       if (!fs.existsSync(this.dataDir)) {
         fs.mkdirSync(this.dataDir, { recursive: true });
@@ -161,12 +197,12 @@ export class JsonDatabaseEngine extends EventEmitter {
     }
   }
 
-  private loadFromDisk() {
+  private loadFromDisk(): void {
     try {
       if (!fs.existsSync(this.filePath)) return;
       const content = fs.readFileSync(this.filePath, "utf8");
       if (content.trim()) {
-        const parsed = JSON.parse(content);
+        const parsed: DbCache = JSON.parse(content);
         if (!parsed._meta) {
           parsed._meta = {
             version: 2,
@@ -185,14 +221,16 @@ export class JsonDatabaseEngine extends EventEmitter {
     }
   }
 
-  private saveToDiskSyncWithRetry(maxRetries = 5) {
+  private saveToDiskSyncWithRetry(maxRetries = 5): void {
     this.internalSave = true;
     this.cache._meta.updatedAt = new Date().toISOString();
     this.cache._meta.rev = (this.cache._meta.rev || 0) + 1;
     const jsonStr = JSON.stringify(this.cache, null, 2);
-    const tmpPath = `${this.filePath}.tmp.${Date.now()}.${crypto.randomBytes(4).toString("hex")}`;
+    const tmpPath = `${this.filePath}.tmp.${Date.now()}.${crypto
+      .randomBytes(4)
+      .toString("hex")}`;
 
-    let lastError: any = null;
+    let lastError: unknown = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         fs.writeFileSync(tmpPath, jsonStr, "utf8");
@@ -211,7 +249,6 @@ export class JsonDatabaseEngine extends EventEmitter {
       } catch (err: any) {
         lastError = err;
         if (err.code === "EBUSY" || err.code === "EPERM") {
-          // Synchronous spin wait for Windows file locks
           const waitEnd = Date.now() + 25 * (attempt + 1);
           while (Date.now() < waitEnd) {}
         } else {
@@ -229,21 +266,21 @@ export class JsonDatabaseEngine extends EventEmitter {
     }, 100);
   }
 
-  public saveToDiskSync() {
+  private saveToDiskSync(): void {
     this.saveToDiskSyncWithRetry();
   }
 
-  public async saveToDisk(): Promise<void> {
+  private async saveToDisk(): Promise<void> {
     this.writeQueue = this.writeQueue.then(async () => {
       this.saveToDiskSyncWithRetry();
     });
     return this.writeQueue;
   }
 
-  private startWatching() {
+  private startWatching(): void {
     if (this.fileWatcher) return;
     try {
-      let timer: NodeJS.Timeout | null = null;
+      let timer: ReturnType<typeof setTimeout> | null = null;
       this.fileWatcher = fs.watch(this.filePath, (eventType) => {
         if (this.internalSave) return;
         if (eventType === "change" || eventType === "rename") {
@@ -265,7 +302,7 @@ export class JsonDatabaseEngine extends EventEmitter {
                   id: null,
                   rev: newRev,
                   timestamp: new Date().toISOString(),
-                } as DbChangeEvent);
+                });
               }
             } catch (watchErr) {
               console.error("[JsonDatabase] Watcher error:", watchErr);
@@ -279,32 +316,36 @@ export class JsonDatabaseEngine extends EventEmitter {
     } catch {}
   }
 
-  private getRawCollection(name: string): any[] {
+  private getCollection(name: string): any[] {
     if (!this.cache[name] || !Array.isArray(this.cache[name])) {
       this.cache[name] = [];
     }
     return this.cache[name];
   }
 
-  public collection<T extends { id?: string } = DatabaseDoc>(name: string): DbCollection<T> {
+  collection(name: string) {
     const self = this;
     return {
-      find(filter?: QueryFilter<T>, options?: QueryOptions<T>): T[] {
-        const items = self.getRawCollection(name) as T[];
+      find(filter?: Record<string, any>, options?: Record<string, any>) {
+        const items = self.getCollection(name);
         let filtered = items.filter((item) => matchesFilter(item, filter));
 
-        const sortField = options?.sort ?? (filter?._sort as string | undefined);
-        const order = (options?.order ?? (filter?._order as "asc" | "desc" | undefined)) || "asc";
+        const sortField = options?.sort ?? filter?._sort;
+        const order = options?.order ?? filter?._order ?? "asc";
         if (sortField) {
           filtered = sortItems(filtered, String(sortField), order);
         }
 
-        const skip = options?.skip ?? (options?.page && options?.limit ? (options.page - 1) * options.limit : 0);
+        const skip =
+          options?.skip ??
+          (options?.page && options?.limit
+            ? (options.page - 1) * options.limit
+            : 0);
         if (skip > 0) {
           filtered = filtered.slice(skip);
         }
 
-        const limit = options?.limit ?? (filter?._limit as number | undefined);
+        const limit = options?.limit ?? filter?._limit;
         if (limit && limit > 0) {
           filtered = filtered.slice(0, limit);
         }
@@ -312,12 +353,12 @@ export class JsonDatabaseEngine extends EventEmitter {
         return [...filtered];
       },
 
-      findPaginated(filter?: QueryFilter<T>, options?: QueryOptions<T>): PaginatedResult<T> {
-        const items = self.getRawCollection(name) as T[];
+      findPaginated(filter?: Record<string, any>, options?: Record<string, any>) {
+        const items = self.getCollection(name);
         let filtered = items.filter((item) => matchesFilter(item, filter));
 
-        const sortField = options?.sort ?? (filter?._sort as string | undefined);
-        const order = (options?.order ?? (filter?._order as "asc" | "desc" | undefined)) || "asc";
+        const sortField = options?.sort ?? filter?._sort;
+        const order = options?.order ?? filter?._order ?? "asc";
         if (sortField) {
           filtered = sortItems(filtered, String(sortField), order);
         }
@@ -341,8 +382,8 @@ export class JsonDatabaseEngine extends EventEmitter {
         };
       },
 
-      findOne(idOrFilter: string | QueryFilter<T>): T | null {
-        const items = self.getRawCollection(name) as T[];
+      findOne(idOrFilter: string | Record<string, any>) {
+        const items = self.getCollection(name);
         if (typeof idOrFilter === "string") {
           return items.find((item) => item.id === idOrFilter) || null;
         }
@@ -352,15 +393,19 @@ export class JsonDatabaseEngine extends EventEmitter {
         return null;
       },
 
-      async insert(doc: Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<T> {
-        const items = self.getRawCollection(name);
-        const id = doc.id || `${name.slice(0, 3)}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+      async insert(doc: Record<string, any>) {
+        const items = self.getCollection(name);
+        const id =
+          doc.id ||
+          `${name.slice(0, 3)}_${Date.now()}_${crypto
+            .randomBytes(3)
+            .toString("hex")}`;
         const newDoc = {
           ...doc,
           id,
-          createdAt: (doc as any).createdAt || new Date().toISOString(),
+          createdAt: doc.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as unknown as T;
+        };
 
         items.unshift(newDoc);
         await self.saveToDisk();
@@ -372,23 +417,27 @@ export class JsonDatabaseEngine extends EventEmitter {
           data: newDoc,
           rev: self.cache._meta.rev,
           timestamp: new Date().toISOString(),
-        } as DbChangeEvent<T>);
+        });
 
         return newDoc;
       },
 
-      async insertMany(docs: Array<Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }>): Promise<T[]> {
-        const items = self.getRawCollection(name);
-        const inserted: T[] = [];
+      async insertMany(docs: Record<string, any>[]) {
+        const items = self.getCollection(name);
+        const inserted: any[] = [];
 
         for (const doc of docs) {
-          const id = doc.id || `${name.slice(0, 3)}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+          const id =
+            doc.id ||
+            `${name.slice(0, 3)}_${Date.now()}_${crypto
+              .randomBytes(3)
+              .toString("hex")}`;
           const newDoc = {
             ...doc,
             id,
-            createdAt: (doc as any).createdAt || new Date().toISOString(),
+            createdAt: doc.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          } as unknown as T;
+          };
           items.unshift(newDoc);
           inserted.push(newDoc);
         }
@@ -401,14 +450,14 @@ export class JsonDatabaseEngine extends EventEmitter {
           count: inserted.length,
           rev: self.cache._meta.rev,
           timestamp: new Date().toISOString(),
-        } as DbChangeEvent<T[]>);
+        });
 
         return inserted;
       },
 
-      async update(idOrFilter: string | QueryFilter<T>, updates: Partial<T>): Promise<T | null> {
-        const items = self.getRawCollection(name);
-        let lastUpdated: T | null = null;
+      async update(idOrFilter: string | Record<string, any>, updates: Record<string, any>) {
+        const items = self.getCollection(name);
+        let lastUpdated: any = null;
 
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
@@ -426,7 +475,7 @@ export class JsonDatabaseEngine extends EventEmitter {
               id: item.id,
               updatedAt: new Date().toISOString(),
             };
-            lastUpdated = items[i] as T;
+            lastUpdated = items[i];
             if (typeof idOrFilter === "string") break;
           }
         }
@@ -441,14 +490,14 @@ export class JsonDatabaseEngine extends EventEmitter {
             updatedCount: 1,
             rev: self.cache._meta.rev,
             timestamp: new Date().toISOString(),
-          } as DbChangeEvent<T>);
+          });
         }
 
         return lastUpdated;
       },
 
-      async updateMany(filter: QueryFilter<T>, updates: Partial<T>): Promise<number> {
-        const items = self.getRawCollection(name);
+      async updateMany(filter: Record<string, any>, updates: Record<string, any>) {
+        const items = self.getCollection(name);
         let count = 0;
 
         for (let i = 0; i < items.length; i++) {
@@ -471,14 +520,14 @@ export class JsonDatabaseEngine extends EventEmitter {
             updatedCount: count,
             rev: self.cache._meta.rev,
             timestamp: new Date().toISOString(),
-          } as DbChangeEvent);
+          });
         }
 
         return count;
       },
 
-      async delete(idOrFilter: string | QueryFilter<T>): Promise<boolean> {
-        const items = self.getRawCollection(name);
+      async delete(idOrFilter: string | Record<string, any>) {
+        const items = self.getCollection(name);
         const initialLength = items.length;
 
         let filtered: any[];
@@ -501,15 +550,15 @@ export class JsonDatabaseEngine extends EventEmitter {
             deletedCount,
             rev: self.cache._meta.rev,
             timestamp: new Date().toISOString(),
-          } as DbChangeEvent);
+          });
           return true;
         }
 
         return false;
       },
 
-      async deleteMany(filter: QueryFilter<T>): Promise<number> {
-        const items = self.getRawCollection(name);
+      async deleteMany(filter: Record<string, any>) {
+        const items = self.getCollection(name);
         const initialLength = items.length;
         const filtered = items.filter((item) => !matchesFilter(item, filter));
         const deletedCount = initialLength - filtered.length;
@@ -523,17 +572,17 @@ export class JsonDatabaseEngine extends EventEmitter {
             deletedCount,
             rev: self.cache._meta.rev,
             timestamp: new Date().toISOString(),
-          } as DbChangeEvent);
+          });
         }
 
         return deletedCount;
       },
 
-      count(filter?: QueryFilter<T>): number {
+      count(filter?: Record<string, any>) {
         return this.find(filter).length;
       },
 
-      async clear(): Promise<boolean> {
+      async clear() {
         self.cache[name] = [];
         await self.saveToDisk();
         self.emit("change", {
@@ -541,26 +590,29 @@ export class JsonDatabaseEngine extends EventEmitter {
           collection: name,
           rev: self.cache._meta.rev,
           timestamp: new Date().toISOString(),
-        } as DbChangeEvent);
+        });
         return true;
       },
 
-      exportJson(): string {
-        const items = self.getRawCollection(name);
+      exportJson() {
+        const items = self.getCollection(name);
         return JSON.stringify(items, null, 2);
       },
 
-      exportCsv(): string {
-        const items = self.getRawCollection(name);
+      exportCsv() {
+        const items = self.getCollection(name);
         if (items.length === 0) return "";
-        const allKeys = Array.from(new Set(items.flatMap((item) => Object.keys(item))));
+        const allKeys = Array.from(
+          new Set(items.flatMap((item) => Object.keys(item)))
+        );
         const header = allKeys.map((k) => `"${k}"`).join(",");
         const rows = items.map((item) => {
           return allKeys
             .map((k) => {
               const val = item[k];
               if (val === undefined || val === null) return '""';
-              const str = typeof val === "object" ? JSON.stringify(val) : String(val);
+              const str =
+                typeof val === "object" ? JSON.stringify(val) : String(val);
               return `"${str.replace(/"/g, '""')}"`;
             })
             .join(",");
@@ -568,14 +620,22 @@ export class JsonDatabaseEngine extends EventEmitter {
         return [header, ...rows].join("\n");
       },
 
-      async importJson(jsonStringOrArray: string | T[]): Promise<{ imported: number }> {
-        const items = self.getRawCollection(name);
-        const parsed: any[] = typeof jsonStringOrArray === "string" ? JSON.parse(jsonStringOrArray) : jsonStringOrArray;
-        if (!Array.isArray(parsed)) throw new Error("Imported data must be an array of documents.");
+      async importJson(jsonStringOrArray: string | any[]) {
+        const items = self.getCollection(name);
+        const parsed =
+          typeof jsonStringOrArray === "string"
+            ? JSON.parse(jsonStringOrArray)
+            : jsonStringOrArray;
+        if (!Array.isArray(parsed))
+          throw new Error("Imported data must be an array of documents.");
 
         let count = 0;
         for (const raw of parsed) {
-          const id = raw.id || `${name.slice(0, 3)}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+          const id =
+            raw.id ||
+            `${name.slice(0, 3)}_${Date.now()}_${crypto
+              .randomBytes(3)
+              .toString("hex")}`;
           const doc = {
             ...raw,
             id,
@@ -593,18 +653,18 @@ export class JsonDatabaseEngine extends EventEmitter {
           count,
           rev: self.cache._meta.rev,
           timestamp: new Date().toISOString(),
-        } as DbChangeEvent);
+        });
 
         return { imported: count };
       },
     };
   }
 
-  public get<T = any>(key: string, defaultValue: T | null = null): T | null {
+  get(key: string, defaultValue: any = null): any {
     return this.cache[key] !== undefined ? this.cache[key] : defaultValue;
   }
 
-  public async set<T = any>(key: string, value: T): Promise<T> {
+  async set(key: string, value: any): Promise<any> {
     this.cache[key] = value;
     await this.saveToDisk();
     this.emit("change", {
@@ -613,11 +673,11 @@ export class JsonDatabaseEngine extends EventEmitter {
       data: value,
       rev: this.cache._meta.rev,
       timestamp: new Date().toISOString(),
-    } as DbChangeEvent);
+    });
     return value;
   }
 
-  public async deleteKey(key: string): Promise<boolean> {
+  async deleteKey(key: string): Promise<boolean> {
     if (this.cache[key] !== undefined) {
       delete this.cache[key];
       await this.saveToDisk();
@@ -626,17 +686,13 @@ export class JsonDatabaseEngine extends EventEmitter {
         key,
         rev: this.cache._meta.rev,
         timestamp: new Date().toISOString(),
-      } as DbChangeEvent);
+      });
       return true;
     }
     return false;
   }
 
-  public getFilePath(): string {
-    return this.filePath;
-  }
-
-  public getStats(): DbStats {
+  getStats() {
     let size = 0;
     try {
       if (fs.existsSync(this.filePath)) {
@@ -647,7 +703,7 @@ export class JsonDatabaseEngine extends EventEmitter {
     const collections: Record<string, number> = {};
     for (const [key, val] of Object.entries(this.cache)) {
       if (key !== "_meta" && Array.isArray(val)) {
-        collections[key] = val.length;
+        collections[key] = (val as any[]).length;
       }
     }
 
@@ -661,7 +717,7 @@ export class JsonDatabaseEngine extends EventEmitter {
     };
   }
 
-  public async backup(customPath?: string): Promise<string> {
+  async backup(customPath?: string): Promise<string> {
     const backupDir = path.join(this.dataDir, "backups");
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
@@ -677,12 +733,12 @@ export class JsonDatabaseEngine extends EventEmitter {
     return targetPath;
   }
 
-  public async restore(backupPath: string): Promise<boolean> {
+  async restore(backupPath: string): Promise<boolean> {
     if (!fs.existsSync(backupPath)) {
       throw new Error(`Backup file does not exist at: ${backupPath}`);
     }
     const content = fs.readFileSync(backupPath, "utf8");
-    const parsed = JSON.parse(content);
+    const parsed: DbCache = JSON.parse(content);
     if (!parsed._meta) {
       parsed._meta = {
         version: 2,
@@ -701,12 +757,12 @@ export class JsonDatabaseEngine extends EventEmitter {
       action: "restore",
       rev: this.cache._meta.rev,
       timestamp: new Date().toISOString(),
-    } as DbChangeEvent);
+    });
 
     return true;
   }
 
-  public async reset(): Promise<boolean> {
+  async reset(): Promise<boolean> {
     this.cache = {
       _meta: {
         version: 2,
@@ -721,19 +777,19 @@ export class JsonDatabaseEngine extends EventEmitter {
       action: "reset",
       rev: this.cache._meta.rev,
       timestamp: new Date().toISOString(),
-    } as DbChangeEvent);
+    });
 
     return true;
   }
 
-  public subscribe(callback: (event: DbChangeEvent) => void): () => void {
+  subscribe(callback: (change: DbChangeEvent) => void): () => void {
     this.on("change", callback);
     return () => {
       this.off("change", callback);
     };
   }
 
-  public close() {
+  close(): void {
     if (this.fileWatcher) {
       this.fileWatcher.close();
       this.fileWatcher = null;
@@ -743,11 +799,22 @@ export class JsonDatabaseEngine extends EventEmitter {
 }
 
 // Singleton storage
-let globalDbInstance: JsonDatabaseEngine | null = null;
+let defaultInstance: JsonDatabaseEngine | null = null;
 
-export function getDatabase(options?: DatabaseOptions): JsonDatabaseEngine {
-  if (!globalDbInstance) {
-    globalDbInstance = new JsonDatabaseEngine(options);
+export function initDatabase(options?: DatabaseOptions): JsonDatabaseEngine {
+  if (!defaultInstance) {
+    defaultInstance = new JsonDatabaseEngine(options);
   }
-  return globalDbInstance;
+  return defaultInstance;
 }
+
+export function getDatabase(): JsonDatabaseEngine {
+  if (!defaultInstance) {
+    defaultInstance = new JsonDatabaseEngine({
+      dataDir: process.env.DATABASE_DIR || path.join(process.cwd(), "data"),
+    });
+  }
+  return defaultInstance;
+}
+
+export { JsonDatabaseEngine };

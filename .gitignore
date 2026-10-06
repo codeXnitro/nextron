@@ -7,3 +7,6 @@ makers
 *.tsbuildinfo
 .env*.local
 data/
+# Compiled Electron main-process output (generated from electron/*.ts)
+electron/*.js
+electron/*.js.map

@@ -1,26 +1,40 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import type { DatabaseDoc, DbChangeEvent, DbStats } from "./types";
+import type {
+  DatabaseDoc,
+  DbChangeEvent,
+  DbStats,
+  PaginatedResult,
+  QueryFilter,
+  QueryOptions,
+} from "./types";
 
 // Check if running inside Electron with desktop bridge available
 export function isDesktopApp(): boolean {
   return typeof window !== "undefined" && Boolean(window.desktop?.db);
 }
 
-// Low-level client for imperative queries from browser or electron
+// Low-level client for imperative queries from browser or Electron renderer
 export const dbClient = {
   collection<T extends { id?: string } = DatabaseDoc>(name: string) {
     return {
-      async find(filter?: Record<string, any>): Promise<T[]> {
+      async find(filter?: QueryFilter<T>, options?: QueryOptions<T>): Promise<T[]> {
         if (isDesktopApp()) {
-          return (await window.desktop!.db!.find(name, filter)) as T[];
+          return (await window.desktop!.db!.find(name, filter, options)) as T[];
         }
         const params = new URLSearchParams({ collection: name });
         if (filter) {
           for (const [k, v] of Object.entries(filter)) {
-            params.append(k, String(v));
+            if (v !== undefined) params.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
           }
+        }
+        if (options) {
+          if (options.sort) params.append("_sort", String(options.sort));
+          if (options.order) params.append("_order", options.order);
+          if (options.limit) params.append("_limit", String(options.limit));
+          if (options.page) params.append("_page", String(options.page));
+          if (options.skip) params.append("_skip", String(options.skip));
         }
         const res = await fetch(`/api/db?${params.toString()}`);
         if (!res.ok) throw new Error(`Failed to fetch collection: ${name}`);
@@ -28,7 +42,37 @@ export const dbClient = {
         return json.data as T[];
       },
 
-      async findOne(idOrFilter: string | Record<string, any>): Promise<T | null> {
+      async findPaginated(filter?: QueryFilter<T>, options?: QueryOptions<T>): Promise<PaginatedResult<T>> {
+        if (isDesktopApp()) {
+          return (await window.desktop!.db!.findPaginated(name, filter, options)) as PaginatedResult<T>;
+        }
+        const params = new URLSearchParams({ collection: name });
+        if (filter) {
+          for (const [k, v] of Object.entries(filter)) {
+            if (v !== undefined) params.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+          }
+        }
+        if (options) {
+          if (options.sort) params.append("_sort", String(options.sort));
+          if (options.order) params.append("_order", options.order);
+          params.append("_limit", String(options.limit || 10));
+          params.append("_page", String(options.page || 1));
+        }
+        const res = await fetch(`/api/db?${params.toString()}`);
+        if (!res.ok) throw new Error(`Failed to fetch paginated collection: ${name}`);
+        const json = await res.json();
+        return {
+          items: json.items || [],
+          total: json.total || 0,
+          page: json.page || 1,
+          limit: json.limit || 10,
+          totalPages: json.totalPages || 1,
+          hasNext: Boolean(json.hasNext),
+          hasPrev: Boolean(json.hasPrev),
+        };
+      },
+
+      async findOne(idOrFilter: string | QueryFilter<T>): Promise<T | null> {
         if (isDesktopApp()) {
           return (await window.desktop!.db!.findOne(name, idOrFilter)) as T | null;
         }
@@ -37,7 +81,7 @@ export const dbClient = {
           params.append("id", idOrFilter);
         } else {
           for (const [k, v] of Object.entries(idOrFilter)) {
-            params.append(k, String(v));
+            if (v !== undefined) params.append(k, String(v));
           }
         }
         const res = await fetch(`/api/db?${params.toString()}`);
@@ -60,6 +104,20 @@ export const dbClient = {
         return json.data as T;
       },
 
+      async insertMany(docs: Array<Record<string, any>>): Promise<T[]> {
+        if (isDesktopApp()) {
+          return (await window.desktop!.db!.insertMany(name, docs)) as T[];
+        }
+        const res = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "insertMany", collection: name, data: docs }),
+        });
+        if (!res.ok) throw new Error("InsertMany failed");
+        const json = await res.json();
+        return json.data as T[];
+      },
+
       async update(id: string, updates: Record<string, any>): Promise<T | null> {
         if (isDesktopApp()) {
           return (await window.desktop!.db!.update(name, id, updates)) as T | null;
@@ -72,6 +130,20 @@ export const dbClient = {
         if (!res.ok) throw new Error("Update failed");
         const json = await res.json();
         return json.data as T | null;
+      },
+
+      async updateMany(filter: QueryFilter<T>, updates: Record<string, any>): Promise<number> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.updateMany(name, filter, updates);
+        }
+        const res = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "updateMany", collection: name, filter, data: updates }),
+        });
+        if (!res.ok) throw new Error("UpdateMany failed");
+        const json = await res.json();
+        return json.count || 0;
       },
 
       async delete(id: string): Promise<boolean> {
@@ -88,12 +160,69 @@ export const dbClient = {
         return Boolean(json.success);
       },
 
-      async count(filter?: Record<string, any>): Promise<number> {
+      async deleteMany(filter: QueryFilter<T>): Promise<number> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.deleteMany(name, filter);
+        }
+        const res = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "deleteMany", collection: name, filter }),
+        });
+        if (!res.ok) throw new Error("DeleteMany failed");
+        const json = await res.json();
+        return json.count || 0;
+      },
+
+      async count(filter?: QueryFilter<T>): Promise<number> {
         if (isDesktopApp()) {
           return await window.desktop!.db!.count(name, filter);
         }
         const items = await this.find(filter);
         return items.length;
+      },
+
+      async clear(): Promise<boolean> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.clear(name);
+        }
+        const res = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "clear", collection: name }),
+        });
+        if (!res.ok) throw new Error("Clear collection failed");
+        const json = await res.json();
+        return Boolean(json.cleared);
+      },
+
+      async exportJson(): Promise<string> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.exportJson(name);
+        }
+        const res = await fetch(`/api/db?collection=${encodeURIComponent(name)}&export=json`);
+        return await res.text();
+      },
+
+      async exportCsv(): Promise<string> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.exportCsv(name);
+        }
+        const res = await fetch(`/api/db?collection=${encodeURIComponent(name)}&export=csv`);
+        return await res.text();
+      },
+
+      async importJson(data: any): Promise<{ imported: number }> {
+        if (isDesktopApp()) {
+          return await window.desktop!.db!.importJson(name, data);
+        }
+        const res = await fetch("/api/db", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "import", collection: name, data }),
+        });
+        if (!res.ok) throw new Error("Import failed");
+        return await res.json();
       },
     };
   },
@@ -121,6 +250,19 @@ export const dbClient = {
     return value;
   },
 
+  async deleteKey(key: string): Promise<boolean> {
+    if (isDesktopApp()) {
+      return await window.desktop!.db!.deleteKey(key);
+    }
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "deleteKey", key }),
+    });
+    if (!res.ok) throw new Error("DeleteKey failed");
+    return true;
+  },
+
   async getStats(): Promise<DbStats> {
     if (isDesktopApp()) {
       return await window.desktop!.db!.getStats();
@@ -129,6 +271,45 @@ export const dbClient = {
     if (!res.ok) throw new Error("Failed to get DB stats");
     const json = await res.json();
     return json.data as DbStats;
+  },
+
+  async backup(customPath?: string): Promise<string> {
+    if (isDesktopApp()) {
+      return await window.desktop!.db!.backup(customPath);
+    }
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "backup", backupPath: customPath }),
+    });
+    const json = await res.json();
+    return json.backupPath;
+  },
+
+  async restore(backupPath: string): Promise<boolean> {
+    if (isDesktopApp()) {
+      return await window.desktop!.db!.restore(backupPath);
+    }
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore", backupPath }),
+    });
+    const json = await res.json();
+    return Boolean(json.restored);
+  },
+
+  async reset(): Promise<boolean> {
+    if (isDesktopApp()) {
+      return await window.desktop!.db!.reset();
+    }
+    const res = await fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset" }),
+    });
+    const json = await res.json();
+    return Boolean(json.reset);
   },
 
   subscribe(callback: (event: DbChangeEvent) => void): () => void {
@@ -156,33 +337,37 @@ export const dbClient = {
  * Super intuitive real-time React hook for collections.
  * Automatically keeps data in sync across Electron main, Next.js server, and all windows!
  */
-export function useDatabase<T extends { id: string } = DatabaseDoc>(
+export function useDatabase<T extends DatabaseDoc = DatabaseDoc>(
   collectionName: string,
-  filter?: Record<string, any>
+  filter?: QueryFilter<T>,
+  options?: QueryOptions<T>
 ) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
   const filterKey = useMemo(() => (filter ? JSON.stringify(filter) : ""), [filter]);
+  const optionsKey = useMemo(() => (options ? JSON.stringify(options) : ""), [options]);
 
   const fetchItems = useCallback(async () => {
     try {
-      const parsedFilter = filterKey ? JSON.parse(filterKey) : undefined;
-      const items = await dbClient.collection<T>(collectionName).find(parsedFilter);
+      const parsedFilter = filterKey ? (JSON.parse(filterKey) as QueryFilter<T>) : undefined;
+      const parsedOptions = optionsKey ? (JSON.parse(optionsKey) as QueryOptions<T>) : undefined;
+      const items = await dbClient.collection<T>(collectionName).find(parsedFilter, parsedOptions);
       return items;
     } catch (err) {
       throw err instanceof Error ? err : new Error(String(err));
     }
-  }, [collectionName, filterKey]);
+  }, [collectionName, filterKey, optionsKey]);
 
   useEffect(() => {
     let isMounted = true;
 
-    // Asynchronous initial fetch (avoids synchronous setState during render)
     void (async () => {
       try {
-        const parsedFilter = filterKey ? JSON.parse(filterKey) : undefined;
-        const items = await dbClient.collection<T>(collectionName).find(parsedFilter);
+        const parsedFilter = filterKey ? (JSON.parse(filterKey) as QueryFilter<T>) : undefined;
+        const parsedOptions = optionsKey ? (JSON.parse(optionsKey) as QueryOptions<T>) : undefined;
+        const items = await dbClient.collection<T>(collectionName).find(parsedFilter, parsedOptions);
         if (isMounted) {
           setData(items);
           setError(null);
@@ -196,11 +381,18 @@ export function useDatabase<T extends { id: string } = DatabaseDoc>(
       }
     })();
 
-    // Subscribe to real-time events (via Electron IPC or Web SSE)
     const unsubscribe = dbClient.subscribe((event: DbChangeEvent) => {
       if (!isMounted) return;
 
-      if (event.action === "external-sync" || (event.collection && event.collection === collectionName)) {
+      if (
+        event.action === "external-sync" ||
+        event.action === "restore" ||
+        event.action === "reset" ||
+        event.action === "insertMany" ||
+        event.action === "updateMany" ||
+        event.action === "deleteMany" ||
+        (event.collection && event.collection === collectionName)
+      ) {
         if (event.action === "insert" && event.data) {
           setData((prev) => {
             const exists = prev.some((item) => item.id === event.id);
@@ -216,7 +408,7 @@ export function useDatabase<T extends { id: string } = DatabaseDoc>(
         } else if (event.action === "clear") {
           setData([]);
         } else {
-          // Re-fetch on bulk or external change
+          // Re-fetch on batch, restore or external changes
           void fetchItems().then((items) => {
             if (isMounted) setData(items);
           });
@@ -228,11 +420,19 @@ export function useDatabase<T extends { id: string } = DatabaseDoc>(
       isMounted = false;
       unsubscribe();
     };
-  }, [collectionName, filterKey, fetchItems]);
+  }, [collectionName, filterKey, optionsKey, fetchItems]);
 
   const insert = useCallback(
     async (doc: Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<T> => {
       const created = await dbClient.collection<T>(collectionName).insert(doc);
+      return created;
+    },
+    [collectionName]
+  );
+
+  const insertMany = useCallback(
+    async (docs: Array<Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }>): Promise<T[]> => {
+      const created = await dbClient.collection<T>(collectionName).insertMany(docs);
       return created;
     },
     [collectionName]
@@ -254,6 +454,10 @@ export function useDatabase<T extends { id: string } = DatabaseDoc>(
     [collectionName]
   );
 
+  const clear = useCallback(async (): Promise<boolean> => {
+    return await dbClient.collection<T>(collectionName).clear();
+  }, [collectionName]);
+
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -272,10 +476,66 @@ export function useDatabase<T extends { id: string } = DatabaseDoc>(
     loading,
     error,
     insert,
+    insertMany,
     update,
     remove,
+    clear,
     refresh,
   };
+}
+
+/**
+ * Real-time hook for a single document
+ */
+export function useDocument<T extends DatabaseDoc = DatabaseDoc>(
+  collectionName: string,
+  id: string | null | undefined
+) {
+  const [document, setDocument] = useState<T | null>(null);
+  const [loading, setLoading] = useState(Boolean(id));
+
+  useEffect(() => {
+    if (!id) return;
+
+    let isMounted = true;
+    void (async () => {
+      const doc = await dbClient.collection<T>(collectionName).findOne(id);
+      if (isMounted) {
+        setDocument(doc);
+        setLoading(false);
+      }
+    })();
+    const unsubscribe = dbClient.subscribe((event) => {
+      if (!isMounted) return;
+      if (event.collection === collectionName && event.id === id) {
+        if (event.action === "update" && event.data) {
+          setDocument(event.data as T);
+        } else if (event.action === "delete") {
+          setDocument(null);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [collectionName, id]);
+
+  const update = useCallback(
+    async (updates: Partial<T>) => {
+      if (!id) return null;
+      return await dbClient.collection<T>(collectionName).update(id, updates);
+    },
+    [collectionName, id]
+  );
+
+  const remove = useCallback(async () => {
+    if (!id) return false;
+    return await dbClient.collection<T>(collectionName).delete(id);
+  }, [collectionName, id]);
+
+  return { document, loading, update, remove };
 }
 
 /**
@@ -302,7 +562,7 @@ export function useKeyValue<T = any>(key: string, defaultValue: T): [T, (val: T)
         setValueState(event.data as T);
       } else if (event.key === key && event.action === "deleteKey") {
         setValueState(defaultValue);
-      } else if (event.action === "external-sync") {
+      } else if (event.action === "external-sync" || event.action === "restore" || event.action === "reset") {
         void (async () => {
           const val = await dbClient.get<T>(key, defaultValue);
           if (mounted) setValueState(val);

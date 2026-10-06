@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
+import { useIsClient } from "@/lib/utils";
 import {
   Database,
   Radio,
@@ -44,12 +45,8 @@ export function DatabasePanel() {
   const [showRawJson, setShowRawJson] = useState(false);
   const [lastActionLog, setLastActionLog] = useState<string>("System ready. Real-time sync active.");
 
-  // Start false to match SSR — update after mount to avoid hydration mismatch.
-  // isDesktopApp() reads window.desktop which doesn't exist during server rendering.
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    setIsDesktop(isDesktopApp());
-  }, []);
+  const isClient = useIsClient();
+  const isDesktop = isClient && isDesktopApp();
 
   const handleAddViaClient = async () => {
     if (!inputTitle.trim()) return;
