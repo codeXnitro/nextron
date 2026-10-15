@@ -27,13 +27,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DatabasePanel } from "@/components/database-panel";
 import { DatabaseStudio } from "@/components/database-studio";
 import { NativePlayground } from "@/components/native-playground";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar, type AppTabKey } from "@/components/app-sidebar";
 import { useIsClient } from "@/lib/utils";
 import { isDesktopApp, db } from "@/lib/db";
 import { desktopConfig } from "@/lib/config";
 import { toast } from "@/components/ui/toast";
-
-type TabKey = "overview" | "database" | "native" | "server" | "settings";
 
 type ApiResponse = {
   status: string;
@@ -61,7 +59,7 @@ export default function Home() {
   const isClient = useIsClient();
   const isDesktop = isClient && isDesktopApp();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [activeTab, setActiveTab] = useState<AppTabKey>("overview");
   const [version, setVersion] = useState("Web Preview");
 
   // Server-side code demonstration state
@@ -117,11 +115,11 @@ export default function Home() {
           {/* Top Navigation Tabs */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-4">
             {/* Navigation Tab Bar */}
-            <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-xl bg-muted/40 border border-border/50">
+            <div className="flex max-w-full items-center gap-1.5 overflow-x-auto p-1 rounded-xl bg-muted/40 border border-border/50">
           <button
             type="button"
             onClick={() => setActiveTab("overview")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeTab === "overview"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -132,7 +130,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setActiveTab("database")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeTab === "database"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -143,7 +141,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setActiveTab("native")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeTab === "native"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -154,7 +152,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setActiveTab("server")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeTab === "server"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -165,7 +163,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeTab === "settings"
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground"

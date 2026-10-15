@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/server";
 import type { DatabaseDoc } from "@/lib/db/types";
 
 export type TodoDoc = DatabaseDoc & {

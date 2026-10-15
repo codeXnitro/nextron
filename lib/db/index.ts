@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import type {
   DatabaseDoc,
   DatabaseInterface,
@@ -49,6 +49,52 @@ export const db: DatabaseInterface = new Proxy({} as DatabaseInterface, {
   },
 });
 
+function useDatabaseSnapshot<T>(
+  getValue: () => T,
+  shouldUpdate: (event: DbChangeEvent) => boolean,
+  serverValue: T
+): [T, () => void] {
+  const snapshotRef = useRef<{ getValue: () => T; value: T } | null>(null);
+  const notifyRef = useRef<(() => void) | null>(null);
+
+  const getSnapshot = useCallback(() => {
+    const snapshot = snapshotRef.current;
+    if (snapshot?.getValue === getValue) return snapshot.value;
+
+    const value = getValue();
+    snapshotRef.current = { getValue, value };
+    return value;
+  }, [getValue]);
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      notifyRef.current = onStoreChange;
+      const unsubscribe = db.subscribe((event) => {
+        if (shouldUpdate(event)) {
+          snapshotRef.current = null;
+          onStoreChange();
+        }
+      });
+
+      return () => {
+        unsubscribe();
+        if (notifyRef.current === onStoreChange) {
+          notifyRef.current = null;
+        }
+      };
+    },
+    [shouldUpdate]
+  );
+  const getServerSnapshot = useCallback(() => serverValue, [serverValue]);
+  const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const refresh = useCallback(() => {
+    snapshotRef.current = null;
+    notifyRef.current?.();
+  }, []);
+
+  return [value, refresh];
+}
+
 /**
  * Hook to access the synchronous database instance in React components
  */
@@ -72,93 +118,79 @@ export function useCollection<T extends DatabaseDoc = DatabaseDoc>(
   const filterKey = useMemo(() => (filter ? JSON.stringify(filter) : ""), [filter]);
   const optionsKey = useMemo(() => (options ? JSON.stringify(options) : ""), [options]);
 
-  // Synchronously fetch initial snapshot with 0ms delay!
   const getSnapshot = useCallback(() => {
     const parsedFilter = filterKey ? (JSON.parse(filterKey) as QueryFilter<T>) : undefined;
     const parsedOptions = optionsKey ? (JSON.parse(optionsKey) as QueryOptions<T>) : undefined;
     return db.collection<T>(collectionName).find(parsedFilter, parsedOptions);
   }, [collectionName, filterKey, optionsKey]);
-
-  // Use state to track live items reactively
-  const [items, setItems] = useState<T[]>(() => getSnapshot());
-
-  useEffect(() => {
-    // Subscribe to all changes (local, cross-window, and electron main)
-    const unsubscribe = db.subscribe((event: DbChangeEvent) => {
-      if (
-        event.action === "external-sync" ||
-        event.action === "restore" ||
-        event.action === "reset" ||
-        event.action === "insertMany" ||
-        event.action === "updateMany" ||
-        event.action === "deleteMany" ||
-        event.collection === collectionName
-      ) {
-        setItems(getSnapshot());
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [collectionName, getSnapshot]);
+  const shouldUpdate = useCallback(
+    (event: DbChangeEvent) =>
+      event.action === "external-sync" ||
+      event.action === "restore" ||
+      event.action === "reset" ||
+      event.action === "insertMany" ||
+      event.action === "updateMany" ||
+      event.action === "deleteMany" ||
+      event.collection === collectionName,
+    [collectionName]
+  );
+  const emptySnapshot = useMemo<T[]>(() => [], []);
+  const [items, refresh] = useDatabaseSnapshot(getSnapshot, shouldUpdate, emptySnapshot);
 
   const insert = useCallback(
     (doc: Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }): DualResult<T> => {
       const res = db.collection<T>(collectionName).insert(doc);
-      setItems(getSnapshot());
+      refresh();
       return res;
     },
-    [collectionName, getSnapshot]
+    [collectionName, refresh]
   );
 
   const insertMany = useCallback(
     (docs: Array<Omit<T, "id" | "createdAt" | "updatedAt"> & { id?: string }>): DualResult<T[]> => {
       const res = db.collection<T>(collectionName).insertMany(docs);
-      setItems(getSnapshot());
+      refresh();
       return res;
     },
-    [collectionName, getSnapshot]
+    [collectionName, refresh]
   );
 
   const update = useCallback(
     (idOrFilter: string | QueryFilter<T>, updates: Partial<T>): DualResult<T | null> => {
       const res = db.collection<T>(collectionName).update(idOrFilter, updates);
-      setItems(getSnapshot());
+      refresh();
       return res;
     },
-    [collectionName, getSnapshot]
+    [collectionName, refresh]
   );
 
   const remove = useCallback(
     (idOrFilter: string | QueryFilter<T>): DualResult<boolean> => {
       const res = db.collection<T>(collectionName).delete(idOrFilter);
-      setItems(getSnapshot());
+      refresh();
       return res;
     },
-    [collectionName, getSnapshot]
+    [collectionName, refresh]
   );
 
   const clear = useCallback((): DualResult<boolean> => {
     const res = db.collection<T>(collectionName).clear();
-    setItems([]);
+    refresh();
     return res;
-  }, [collectionName]);
-
-  const count = items.length;
+  }, [collectionName, refresh]);
 
   return {
     items,
     data: items, // alias for backwards compatibility
-    count,
-    loading: false, // always false because synchronous!
+    count: items.length,
+    loading: false,
     insert,
     insertMany,
     update,
     remove,
     delete: remove, // alias
     clear,
-    refresh: () => setItems(getSnapshot()),
+    refresh,
   };
 }
 
@@ -169,47 +201,36 @@ export function useDocument<T extends DatabaseDoc = DatabaseDoc>(
   collectionName: string,
   id: string | null | undefined
 ) {
-  const getDoc = useCallback((): T | null => {
+  const getSnapshot = useCallback((): T | null => {
     if (!id) return null;
     return db.collection<T>(collectionName).findOne(id);
   }, [collectionName, id]);
-
-  const [document, setDocument] = useState<T | null>(() => getDoc());
-
-  useEffect(() => {
-    const unsubscribe = db.subscribe((event: DbChangeEvent) => {
-      if (event.collection === collectionName && event.id === id) {
-        setDocument(getDoc());
-      } else if (
-        event.action === "external-sync" ||
-        event.action === "restore" ||
-        event.action === "reset"
-      ) {
-        setDocument(getDoc());
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [collectionName, id, getDoc]);
+  const shouldUpdate = useCallback(
+    (event: DbChangeEvent) =>
+      (event.collection === collectionName && event.id === id) ||
+      event.action === "external-sync" ||
+      event.action === "restore" ||
+      event.action === "reset",
+    [collectionName, id]
+  );
+  const [document, refresh] = useDatabaseSnapshot(getSnapshot, shouldUpdate, null);
 
   const update = useCallback(
     (updates: Partial<T>): DualResult<T | null> => {
       if (!id) return null as any;
       const res = db.collection<T>(collectionName).update(id, updates);
-      setDocument(getDoc());
+      refresh();
       return res;
     },
-    [collectionName, id, getDoc]
+    [collectionName, id, refresh]
   );
 
   const remove = useCallback((): DualResult<boolean> => {
     if (!id) return false as any;
     const res = db.collection<T>(collectionName).delete(id);
-    setDocument(null);
+    refresh();
     return res;
-  }, [collectionName, id]);
+  }, [collectionName, id, refresh]);
 
   return {
     document,
@@ -226,37 +247,24 @@ export function useValue<T = any>(
   key: string,
   defaultValue: T
 ): [T, (val: T) => DualResult<T>] {
-  const [val, setVal] = useState<T>(() => db.get<T>(key, defaultValue));
-
-  useEffect(() => {
-    const unsubscribe = db.subscribe((event: DbChangeEvent) => {
-      if (event.key === key) {
-        if (event.action === "set") {
-          setVal(event.data as T);
-        } else if (event.action === "deleteKey") {
-          setVal(defaultValue);
-        }
-      } else if (
-        event.action === "external-sync" ||
-        event.action === "restore" ||
-        event.action === "reset"
-      ) {
-        setVal(db.get<T>(key, defaultValue));
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [key, defaultValue]);
+  const getSnapshot = useCallback(() => db.get<T>(key, defaultValue), [key, defaultValue]);
+  const shouldUpdate = useCallback(
+    (event: DbChangeEvent) =>
+      (event.key === key && (event.action === "set" || event.action === "deleteKey")) ||
+      event.action === "external-sync" ||
+      event.action === "restore" ||
+      event.action === "reset",
+    [key]
+  );
+  const [val, refresh] = useDatabaseSnapshot(getSnapshot, shouldUpdate, defaultValue);
 
   const setValue = useCallback(
     (newVal: T): DualResult<T> => {
       const res = db.set<T>(key, newVal);
-      setVal(newVal);
+      refresh();
       return res;
     },
-    [key]
+    [key, refresh]
   );
 
   return [val, setValue];
@@ -266,21 +274,17 @@ export function useValue<T = any>(
  * Real-time hook for database statistics
  */
 export function useDatabaseStats() {
-  const [stats, setStats] = useState<DbStats>(() => db.getStats());
-
-  useEffect(() => {
-    const unsubscribe = db.subscribe(() => {
-      setStats(db.getStats());
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  const getSnapshot = useCallback(() => db.getStats(), []);
+  const shouldUpdate = useCallback(() => true, []);
+  const [stats, refresh] = useDatabaseSnapshot<DbStats | null>(
+    getSnapshot,
+    shouldUpdate,
+    null
+  );
 
   return {
     stats,
-    refresh: () => setStats(db.getStats()),
+    refresh,
   };
 }
 

@@ -38,6 +38,11 @@ Unlike conventional Electron starters that require static HTML exports (`output:
   npm run init:cli
   ```
 - Browse to your desired directory, choose your app name and theme, click **"Initialize"**, and your new desktop app is scaffolded in seconds.
+- Build and distribute the standalone Project Creator app:
+  ```bash
+  npm run make:creator
+  ```
+  On Windows, the Squirrel installer is written to `out/creator-build/make/squirrel.windows/`. The installed Creator bundles the Nextron template; end users do not need this repository. They need Node.js/npm only if they select the option to install project dependencies during scaffolding.
 
 ### 4. 🪟 Production-Ready Desktop UI & Sidebar
 - **Hydration-Safe Sidebar**: Includes shadcn/ui Sidebar primitives in `components/ui/sidebar.tsx` and `components/app-sidebar.tsx`. Eliminates the common `useMemo` / `Math.random` skeleton hydration mismatch bug with deterministic widths.
@@ -272,6 +277,8 @@ npm run make
 | `npm run dev` | Starts Next.js and Electron with live watch and hot reload |
 | `npm run dev:web` | Starts Next.js development server in web browser mode |
 | `npm run init:app` | Launches the visual Electron Project Initializer GUI |
+| `npm run creator:dev` | Runs the separate standalone Project Creator during development |
+| `npm run make:creator` | Builds the standalone Project Creator installer for the current OS |
 | `npm run init:cli` | Launches the interactive terminal project initializer |
 | `npm run sync:config` | Synchronizes `desktop.config.json` into `package.json` |
 | `npm run build` | Compiles Electron TypeScript and builds standalone Next.js server |

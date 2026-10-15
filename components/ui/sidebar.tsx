@@ -117,12 +117,13 @@ export const SidebarProvider = React.forwardRef<
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH,
+              "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
               "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
               ...style,
             } as React.CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper flex min-h-screen w-full has-[[data-variant=inset]]:bg-sidebar",
+            "group/sidebar-wrapper flex min-h-[calc(100dvh-2.5rem)] w-full has-[[data-variant=inset]]:bg-sidebar",
             className
           )}
           ref={ref}
@@ -161,7 +162,7 @@ export const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground border-r border-border/50",
+            "flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar text-sidebar-foreground border-r border-border/50",
             className
           )}
           ref={ref}
@@ -182,7 +183,7 @@ export const Sidebar = React.forwardRef<
             />
             <div
               className={cn(
-                "relative flex h-full w-[--sidebar-width-mobile] flex-col bg-sidebar p-2 text-sidebar-foreground shadow-2xl z-50",
+                "relative flex h-full w-[var(--sidebar-width-mobile)] flex-col bg-sidebar p-2 text-sidebar-foreground shadow-2xl z-50",
                 className
               )}
               ref={ref}
@@ -206,23 +207,23 @@ export const Sidebar = React.forwardRef<
       >
         <div
           className={cn(
-            "duration-200 relative h-screen w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "duration-200 relative h-[calc(100dvh-2.5rem)] w-[var(--sidebar-width)] bg-transparent transition-[width] ease-linear",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+1rem)]"
+              : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]"
           )}
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-screen w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex flex-col border-r border-border/50 bg-background/95 backdrop-blur-md",
+            "duration-200 fixed top-10 bottom-0 z-10 hidden w-[var(--sidebar-width)] transition-[left,right,width] ease-linear md:flex flex-col border-r border-border/50 bg-background/95 backdrop-blur-md",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
             variant === "floating" || variant === "inset"
-              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+theme(spacing.4)+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
+              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+1rem+2px)]"
+              : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]",
             className
           )}
           {...props}
@@ -337,7 +338,7 @@ export const SidebarGroupLabel = React.forwardRef<
       ref={ref}
       data-sidebar="group-label"
       className={cn(
-        "duration-200 flex h-7 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80 outline-none transition-[margin,opa] ease-linear group-data-[collapsible=icon]:opacity-0",
+        "duration-200 flex h-7 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80 outline-none transition-[margin,opacity] ease-linear group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0",
         className
       )}
       {...props}

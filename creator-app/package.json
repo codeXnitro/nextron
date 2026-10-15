@@ -1,0 +1,22 @@
+{
+  "name": "nextron-project-creator",
+  "productName": "Nextron Project Creator",
+  "version": "1.0.1",
+  "description": "Create new Nextron desktop application projects.",
+  "author": "Nextron Team",
+  "license": "MIT",
+  "main": "creator-main.cjs",
+  "dependencies": {},
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.3",
+    "@electron-forge/maker-deb": "^7.8.3",
+    "@electron-forge/maker-dmg": "^7.8.3",
+    "@electron-forge/maker-squirrel": "^7.8.3",
+    "@electron-forge/maker-zip": "^7.8.3",
+    "electron": "^37.2.0"
+  },
+  "scripts": {
+    "start": "electron-forge start",
+    "make": "electron-forge make"
+  }
+}

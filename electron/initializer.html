@@ -1,311 +1,568 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nextron Desktop App Initializer</title>
-  <style>
-    :root {
-      --bg: #090d16;
-      --card: #111726;
-      --border: #1e293b;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent: #10b981;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; overflow-y: auto; }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .logo { width: 36px; height: 36px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: #fff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
-    .title h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-    .title p { font-size: 12px; color: var(--text-muted); }
-    .badge { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 9999px; font-weight: 600; }
-    
-    .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: #cbd5e1; }
-    
-    .form-group { margin-bottom: 14px; }
-    label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
-    .input-row { display: flex; gap: 8px; }
-    input[type="text"], input[type="number"] { width: 100%; background: #0b0f19; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s; }
-    input:focus { border-color: var(--primary); }
-    
-    button { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    button:hover { background: var(--primary-hover); }
-    button.secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-    button.secondary:hover { background: #334155; }
-    button.accent { background: #059669; }
-    button.accent:hover { background: #047857; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); margin-top: 10px; cursor: pointer; }
-    .checkbox-row input { accent-color: var(--primary); }
-    
-    pre { background: #070a12; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #38bdf8; overflow-x: auto; max-height: 220px; }
-    
-    .terminal { background: #05070e; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #a7f3d0; height: 160px; overflow-y: auto; margin-top: 14px; line-height: 1.5; }
-    .log-line { margin-bottom: 2px; }
-    .log-line.info { color: #94a3b8; }
-    .log-line.success { color: #34d399; font-weight: 600; }
-    .log-line.warn { color: #fbbf24; }
-    
-    .progress-bar-bg { width: 100%; height: 6px; background: #1e293b; border-radius: 9999px; overflow: hidden; margin-top: 12px; display: none; }
-    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #10b981); transition: width 0.3s; }
-    
-    .success-actions { display: none; margin-top: 16px; padding: 14px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; text-align: center; }
-    .success-actions h3 { font-size: 14px; color: #34d399; margin-bottom: 8px; }
-    .success-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-  </style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nextron Desktop App Initializer</title>
+    <style>
+      :root {
+        --bg: #090d16;
+        --card: #111726;
+        --border: #1e293b;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #10b981;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        padding: 24px;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 18px;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+      .title h1 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+      .title p {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .badge {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-weight: 600;
+      }
 
-  <div class="header">
-    <div class="brand">
-      <div class="logo">N</div>
-      <div class="title">
-        <h1>Nextron Desktop Initializer</h1>
-        <p>Scaffold Next.js 16 + Electron projects without git clone</p>
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #cbd5e1;
+      }
+
+      .form-group {
+        margin-bottom: 14px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+      }
+      .input-row {
+        display: flex;
+        gap: 8px;
+      }
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        background: #0b0f19;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: var(--primary);
+      }
+
+      button {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      button:hover {
+        background: var(--primary-hover);
+      }
+      button.secondary {
+        background: #1e293b;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+      }
+      button.secondary:hover {
+        background: #334155;
+      }
+      button.accent {
+        background: #059669;
+      }
+      button.accent:hover {
+        background: #047857;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 10px;
+        cursor: pointer;
+      }
+      .checkbox-row input {
+        accent-color: var(--primary);
+      }
+
+      pre {
+        background: #070a12;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: #38bdf8;
+        overflow-x: auto;
+        max-height: 220px;
+      }
+
+      .terminal {
+        background: #05070e;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: #a7f3d0;
+        height: 160px;
+        overflow-y: auto;
+        margin-top: 14px;
+        line-height: 1.5;
+      }
+      .log-line {
+        margin-bottom: 2px;
+      }
+      .log-line.info {
+        color: #94a3b8;
+      }
+      .log-line.success {
+        color: #34d399;
+        font-weight: 600;
+      }
+      .log-line.warn {
+        color: #fbbf24;
+      }
+
+      .progress-bar-bg {
+        width: 100%;
+        height: 6px;
+        background: #1e293b;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-top: 12px;
+        display: none;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #3b82f6, #10b981);
+        transition: width 0.3s;
+      }
+
+      .success-actions {
+        display: none;
+        margin-top: 16px;
+        padding: 14px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 10px;
+        text-align: center;
+      }
+      .success-actions h3 {
+        font-size: 14px;
+        color: #34d399;
+        margin-bottom: 8px;
+      }
+      .success-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="brand">
+        <div class="logo">N</div>
+        <div class="title">
+          <h1>Nextron Desktop Initializer</h1>
+          <p>Scaffold Next.js 16 + Electron projects without git clone</p>
+        </div>
       </div>
+      <span class="badge">Desktop Studio</span>
     </div>
-    <span class="badge">Desktop Studio</span>
-  </div>
 
-  <div class="grid">
-    <!-- Left Column: Project Config Form -->
-    <div class="card">
-      <div class="card-title">🚀 Project Details</div>
+    <div class="grid">
+      <!-- Left Column: Project Config Form -->
+      <div class="card">
+        <div class="card-title">🚀 Project Details</div>
 
-      <div class="form-group">
-        <label>Destination Directory</label>
-        <div class="input-row">
-          <input type="text" id="targetDir" placeholder="Select project folder on disk..." readonly>
-          <button type="button" class="secondary" id="btnBrowse">Browse...</button>
-        </div>
-      </div>
-
-      <div class="two-col">
         <div class="form-group">
-          <label>Application Name</label>
-          <input type="text" id="appName" value="My Desktop App">
-        </div>
-        <div class="form-group">
-          <label>Package Slug</label>
-          <input type="text" id="appSlug" value="my-desktop-app">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Description</label>
-        <input type="text" id="appDesc" value="A native desktop application built with Next.js 16 and Electron">
-      </div>
-
-      <div class="two-col">
-        <div class="form-group">
-          <label>Author Name</label>
-          <input type="text" id="authorName" value="Developer">
-        </div>
-        <div class="form-group">
-          <label>Author Email</label>
-          <input type="text" id="authorEmail" value="dev@example.com">
-        </div>
-      </div>
-
-      <div class="two-col">
-        <div class="form-group">
-          <label>Bundle ID</label>
-          <input type="text" id="bundleId" value="com.developer.mydesktopapp">
-        </div>
-        <div class="form-group">
-          <label>Window Dimensions</label>
+          <label>Destination Directory</label>
           <div class="input-row">
-            <input type="number" id="winWidth" value="1280" placeholder="Width">
-            <input type="number" id="winHeight" value="840" placeholder="Height">
+            <input
+              type="text"
+              id="targetDir"
+              placeholder="Select project folder on disk..."
+              readonly
+            />
+            <button type="button" class="secondary" id="btnBrowse">
+              Browse...
+            </button>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="form-group">
+            <label>Application Name</label>
+            <input type="text" id="appName" value="My Desktop App" />
+          </div>
+          <div class="form-group">
+            <label>Package Slug</label>
+            <input type="text" id="appSlug" value="my-desktop-app" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <input
+            type="text"
+            id="appDesc"
+            value="A native desktop application built with Next.js 16 and Electron"
+          />
+        </div>
+
+        <div class="two-col">
+          <div class="form-group">
+            <label>Author Name</label>
+            <input type="text" id="authorName" value="Developer" />
+          </div>
+          <div class="form-group">
+            <label>Author Email</label>
+            <input type="text" id="authorEmail" value="dev@example.com" />
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="form-group">
+            <label>Bundle ID</label>
+            <input
+              type="text"
+              id="bundleId"
+              value="com.developer.mydesktopapp"
+            />
+          </div>
+          <div class="form-group">
+            <label>Window Dimensions</label>
+            <div class="input-row">
+              <input
+                type="number"
+                id="winWidth"
+                value="1280"
+                placeholder="Width"
+              />
+              <input
+                type="number"
+                id="winHeight"
+                value="840"
+                placeholder="Height"
+              />
+            </div>
+          </div>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="installDeps" checked />
+          <span
+            >Run <code>npm install</code> automatically after scaffolding</span
+          >
+        </label>
+
+        <div style="margin-top: 20px">
+          <button
+            type="button"
+            id="btnInit"
+            style="width: 100%; padding: 12px"
+            disabled
+          >
+            ✨ Initialize New Desktop Project
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Config Preview & Scaffolding Terminal -->
+      <div class="card">
+        <div class="card-title">⚙️ desktop.config.json Preview</div>
+        <pre id="configPreview"></pre>
+
+        <div class="progress-bar-bg" id="progressBg">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="terminal" id="terminalLog">
+          <div class="log-line info">
+            [Ready] Select a target folder to initialize your desktop app.
+          </div>
+        </div>
+
+        <div class="success-actions" id="successBanner">
+          <h3>🎉 Project Created Successfully!</h3>
+          <p style="font-size: 12px; color: #94a3b8">
+            Your Next.js 16 + Electron desktop app is ready.
+          </p>
+          <div class="success-buttons">
+            <button type="button" class="accent" id="btnOpenCode">
+              Open in VS Code
+            </button>
+            <button type="button" class="secondary" id="btnOpenFolder">
+              Open Folder
+            </button>
           </div>
         </div>
       </div>
-
-      <label class="checkbox-row">
-        <input type="checkbox" id="installDeps" checked>
-        <span>Run <code>npm install</code> automatically after scaffolding</span>
-      </label>
-
-      <div style="margin-top: 20px;">
-        <button type="button" id="btnInit" style="width: 100%; padding: 12px;" disabled>
-          ✨ Initialize New Desktop Project
-        </button>
-      </div>
     </div>
 
-    <!-- Right Column: Live Config Preview & Scaffolding Terminal -->
-    <div class="card">
-      <div class="card-title">⚙️ desktop.config.json Preview</div>
-      <pre id="configPreview"></pre>
+    <script>
+      const elTargetDir = document.getElementById("targetDir");
+      const elAppName = document.getElementById("appName");
+      const elAppSlug = document.getElementById("appSlug");
+      const elAppDesc = document.getElementById("appDesc");
+      const elAuthorName = document.getElementById("authorName");
+      const elAuthorEmail = document.getElementById("authorEmail");
+      const elBundleId = document.getElementById("bundleId");
+      const elWinWidth = document.getElementById("winWidth");
+      const elWinHeight = document.getElementById("winHeight");
+      const elInstallDeps = document.getElementById("installDeps");
+      const elConfigPreview = document.getElementById("configPreview");
+      const elBtnBrowse = document.getElementById("btnBrowse");
+      const elBtnInit = document.getElementById("btnInit");
+      const elTerminal = document.getElementById("terminalLog");
+      const elProgressBg = document.getElementById("progressBg");
+      const elProgressBar = document.getElementById("progressBar");
+      const elSuccessBanner = document.getElementById("successBanner");
+      const elBtnOpenCode = document.getElementById("btnOpenCode");
+      const elBtnOpenFolder = document.getElementById("btnOpenFolder");
 
-      <div class="progress-bar-bg" id="progressBg">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
+      let createdPath = "";
 
-      <div class="terminal" id="terminalLog">
-        <div class="log-line info">[Ready] Select a target folder to initialize your desktop app.</div>
-      </div>
+      function log(msg, type = "info") {
+        const line = document.createElement("div");
+        line.className = "log-line " + type;
+        line.textContent = `> ${msg}`;
+        elTerminal.appendChild(line);
+        elTerminal.scrollTop = elTerminal.scrollHeight;
+      }
 
-      <div class="success-actions" id="successBanner">
-        <h3>🎉 Project Created Successfully!</h3>
-        <p style="font-size: 12px; color: #94a3b8;">Your Next.js 16 + Electron desktop app is ready.</p>
-        <div class="success-buttons">
-          <button type="button" class="accent" id="btnOpenCode">Open in VS Code</button>
-          <button type="button" class="secondary" id="btnOpenFolder">Open Folder</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const elTargetDir = document.getElementById('targetDir');
-    const elAppName = document.getElementById('appName');
-    const elAppSlug = document.getElementById('appSlug');
-    const elAppDesc = document.getElementById('appDesc');
-    const elAuthorName = document.getElementById('authorName');
-    const elAuthorEmail = document.getElementById('authorEmail');
-    const elBundleId = document.getElementById('bundleId');
-    const elWinWidth = document.getElementById('winWidth');
-    const elWinHeight = document.getElementById('winHeight');
-    const elInstallDeps = document.getElementById('installDeps');
-    const elConfigPreview = document.getElementById('configPreview');
-    const elBtnBrowse = document.getElementById('btnBrowse');
-    const elBtnInit = document.getElementById('btnInit');
-    const elTerminal = document.getElementById('terminalLog');
-    const elProgressBg = document.getElementById('progressBg');
-    const elProgressBar = document.getElementById('progressBar');
-    const elSuccessBanner = document.getElementById('successBanner');
-    const elBtnOpenCode = document.getElementById('btnOpenCode');
-    const elBtnOpenFolder = document.getElementById('btnOpenFolder');
-
-    let createdPath = "";
-
-    function log(msg, type = "info") {
-      const line = document.createElement("div");
-      line.className = "log-line " + type;
-      line.textContent = `> ${msg}`;
-      elTerminal.appendChild(line);
-      elTerminal.scrollTop = elTerminal.scrollHeight;
-    }
-
-    function updatePreview() {
-      const config = {
-        app: {
-          name: elAppName.value || "My Desktop App",
-          slug: elAppSlug.value || "my-desktop-app",
-          version: "1.0.0",
-          description: elAppDesc.value || "",
-          author: {
-            name: elAuthorName.value || "Developer",
-            email: elAuthorEmail.value || "dev@example.com"
+      function updatePreview() {
+        const config = {
+          app: {
+            name: elAppName.value || "My Desktop App",
+            slug: elAppSlug.value || "my-desktop-app",
+            version: "1.0.0",
+            description: elAppDesc.value || "",
+            author: {
+              name: elAuthorName.value || "Developer",
+              email: elAuthorEmail.value || "dev@example.com",
+            },
+            bundleId: elBundleId.value || "com.developer.app",
           },
-          bundleId: elBundleId.value || "com.developer.app"
-        },
-        window: {
-          width: parseInt(elWinWidth.value, 10) || 1280,
-          height: parseInt(elWinHeight.value, 10) || 840,
-          backgroundColor: "#090d16",
-          titleBarStyle: "hidden",
-          frame: false
-        },
-        database: {
-          filename: "db.json",
-          autoBackup: true
-        }
-      };
-      elConfigPreview.textContent = JSON.stringify(config, null, 2);
-      return config;
-    }
+          window: {
+            width: parseInt(elWinWidth.value, 10) || 1280,
+            height: parseInt(elWinHeight.value, 10) || 840,
+            backgroundColor: "#090d16",
+            titleBarStyle: "hidden",
+            frame: false,
+          },
+          database: {
+            filename: "db.json",
+            autoBackup: true,
+          },
+        };
+        elConfigPreview.textContent = JSON.stringify(config, null, 2);
+        return config;
+      }
 
-    elAppName.addEventListener('input', () => {
-      const slug = elAppName.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      elAppSlug.value = slug;
-      elBundleId.value = `com.${slug || 'app'}.desktop`;
+      elAppName.addEventListener("input", () => {
+        const slug = elAppName.value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+        elAppSlug.value = slug;
+        elBundleId.value = `com.${slug || "app"}.desktop`;
+        updatePreview();
+      });
+
+      [
+        elAppSlug,
+        elAppDesc,
+        elAuthorName,
+        elAuthorEmail,
+        elBundleId,
+        elWinWidth,
+        elWinHeight,
+      ].forEach((el) => {
+        el.addEventListener("input", updatePreview);
+      });
+
       updatePreview();
-    });
 
-    [elAppSlug, elAppDesc, elAuthorName, elAuthorEmail, elBundleId, elWinWidth, elWinHeight].forEach(el => {
-      el.addEventListener('input', updatePreview);
-    });
-
-    updatePreview();
-
-    elBtnBrowse.addEventListener('click', async () => {
-      if (window.initializer?.pickFolder) {
-        const folder = await window.initializer.pickFolder();
-        if (folder) {
-          elTargetDir.value = folder;
-          elBtnInit.disabled = false;
-          log(`Selected destination: ${folder}`, "info");
+      elBtnBrowse.addEventListener("click", async () => {
+        if (window.initializer?.pickFolder) {
+          const folder = await window.initializer.pickFolder();
+          if (folder) {
+            elTargetDir.value = folder;
+            elBtnInit.disabled = false;
+            log(`Selected destination: ${folder}`, "info");
+          }
         }
-      }
-    });
-
-    if (window.initializer?.onLog) {
-      window.initializer.onLog((msg) => {
-        log(msg, msg.includes("complete") || msg.includes("success") ? "success" : "info");
       });
-    }
 
-    if (window.initializer?.onProgress) {
-      window.initializer.onProgress((pct, step) => {
+      if (window.initializer?.onLog) {
+        window.initializer.onLog((msg) => {
+          log(
+            msg,
+            msg.includes("complete") || msg.includes("success")
+              ? "success"
+              : "info",
+          );
+        });
+      }
+
+      if (window.initializer?.onProgress) {
+        window.initializer.onProgress((pct, step) => {
+          elProgressBg.style.display = "block";
+          elProgressBar.style.width = `${pct}%`;
+          log(step, "info");
+        });
+      }
+
+      elBtnInit.addEventListener("click", async () => {
+        if (!elTargetDir.value) return;
+        elBtnInit.disabled = true;
+        elBtnBrowse.disabled = true;
         elProgressBg.style.display = "block";
-        elProgressBar.style.width = `${pct}%`;
-        log(step, "info");
-      });
-    }
+        elProgressBar.style.width = "10%";
+        log("Starting project scaffolding...", "info");
 
-    elBtnInit.addEventListener('click', async () => {
-      if (!elTargetDir.value) return;
-      elBtnInit.disabled = true;
-      elBtnBrowse.disabled = true;
-      elProgressBg.style.display = "block";
-      elProgressBar.style.width = "10%";
-      log("Starting project scaffolding...", "info");
+        const config = updatePreview();
+        const payload = {
+          targetDir: elTargetDir.value,
+          config,
+          installDeps: elInstallDeps.checked,
+        };
 
-      const config = updatePreview();
-      const payload = {
-        targetDir: elTargetDir.value,
-        config,
-        installDeps: elInstallDeps.checked
-      };
-
-      try {
-        const result = await window.initializer.startInit(payload);
-        if (result && result.success) {
-          createdPath = result.projectPath;
-          elProgressBar.style.width = "100%";
-          log("Scaffolding finished successfully! Ready to develop.", "success");
-          elSuccessBanner.style.display = "block";
-        } else {
-          log("Scaffolding error: " + (result?.error || "Unknown error"), "warn");
+        try {
+          const result = await window.initializer.startInit(payload);
+          if (result && result.success) {
+            createdPath = result.projectPath;
+            elProgressBar.style.width = "100%";
+            log(
+              "Scaffolding finished successfully! Ready to develop.",
+              "success",
+            );
+            elSuccessBanner.style.display = "block";
+          } else {
+            log(
+              "Scaffolding error: " + (result?.error || "Unknown error"),
+              "warn",
+            );
+            elBtnInit.disabled = false;
+          }
+        } catch (err) {
+          log("Fatal error: " + String(err), "warn");
           elBtnInit.disabled = false;
         }
-      } catch (err) {
-        log("Fatal error: " + String(err), "warn");
-        elBtnInit.disabled = false;
-      }
-    });
+      });
 
-    elBtnOpenCode.addEventListener('click', () => {
-      if (createdPath && window.initializer?.openVsCode) {
-        window.initializer.openVsCode(createdPath);
-      }
-    });
+      elBtnOpenCode.addEventListener("click", () => {
+        if (createdPath && window.initializer?.openVsCode) {
+          window.initializer.openVsCode(createdPath);
+        }
+      });
 
-    elBtnOpenFolder.addEventListener('click', () => {
-      if (createdPath && window.initializer?.openFolder) {
-        window.initializer.openFolder(createdPath);
-      }
-    });
-  </script>
-</body>
+      elBtnOpenFolder.addEventListener("click", () => {
+        if (createdPath && window.initializer?.openFolder) {
+          window.initializer.openFolder(createdPath);
+        }
+      });
+    </script>
+  </body>
 </html>
